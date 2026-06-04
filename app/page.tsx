@@ -52,8 +52,7 @@ function ResumeBuilderInner() {
   const [hasMounted, setHasMounted] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
 
-  const desktopPreviewRef = useRef<HTMLDivElement>(null);
-  const mobilePrintRef = useRef<HTMLDivElement>(null);
+  const printContentRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,8 +63,8 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const desktopHandlePrint = useReactToPrint({
-    contentRef: desktopPreviewRef,
+  const handlePrint = useReactToPrint({
+    contentRef: printContentRef,
     documentTitle: "resume",
     pageStyle: `
       @page { size: A4; margin: 0; }
@@ -75,28 +74,6 @@ function ResumeBuilderInner() {
       }
     `,
   });
-
-  const mobileHandlePrint = useReactToPrint({
-    contentRef: mobilePrintRef,
-    documentTitle: "resume",
-    pageStyle: `
-      @page { size: A4; margin: 0; }
-      @media print {
-        html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        html > body > * { display: none !important; }
-        #mobile-print-target { display: block !important; visibility: visible !important; height: auto !important; overflow: visible !important; position: static !important; }
-        #mobile-print-target * { display: revert !important; visibility: visible !important; }
-      }
-    `,
-  });
-
-  const handlePrint = () => {
-    if (isMobile) {
-      mobileHandlePrint();
-    } else {
-      desktopHandlePrint();
-    }
-  };
 
   const tabs = isMobile ? MOBILE_TABS : DESKTOP_TABS;
   const isPreviewTab = activeTab === "preview";
@@ -142,10 +119,9 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Mobile print target — hidden visually, shown only during print */}
       <div
-        id="mobile-print-target"
-        ref={mobilePrintRef}
+        ref={printContentRef}
+        className="resume-print-container"
         style={{ visibility: "hidden", height: 0, overflow: "hidden" }}
         aria-hidden="true"
       >
@@ -153,7 +129,7 @@ function ResumeBuilderInner() {
       </div>
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
-        <aside className="no-print w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
+        <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
               <div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
@@ -164,7 +140,7 @@ function ResumeBuilderInner() {
                 <p className="text-[10px] md:text-[11px] text-zinc-500 leading-tight">AI Resume Builder</p>
               </div>
             </div>
-            <Button onClick={handlePrint} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3">
+            <Button onClick={() => handlePrint()} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3">
               <Download className="h-3 w-3 md:h-3.5 md:w-3.5" />
               <span className="hidden sm:inline">Download PDF</span>
               <span className="sm:hidden">PDF</span>
@@ -186,9 +162,9 @@ function ResumeBuilderInner() {
             </a>
           </footer>
         </aside>
-        <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-8">
+        <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-8 shrink-0">
           <div className="flex flex-col items-center gap-4">
-            <div ref={desktopPreviewRef} className="origin-top shadow-2xl print:shadow-none">
+            <div className="origin-top shadow-2xl">
               <ResumePreview />
             </div>
           </div>

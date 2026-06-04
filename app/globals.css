@@ -17,35 +17,13 @@
   display: none;
 }
 
-/* ---- Custom prose for resume preview ---- */
-.resume-preview-content ul {
-  list-style: disc;
-  padding-left: 1.25rem;
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
-}
-.resume-preview-content ul li {
-  margin-bottom: 0.125rem;
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: #3f3f46;
-}
-.resume-preview-content p {
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: #3f3f46;
-}
-.resume-preview-content strong {
-  color: #18181b;
-}
-.resume-preview-content em {
-  color: #52525b;
-}
-
-/* ---- Print Styles ---- */
+/* ---- Print Styles — A4 resume export ---- */
 @media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
   html,
   body {
     margin: 0 !important;
@@ -53,6 +31,24 @@
     background: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Force the resume preview to display on print even if hidden on mobile */
+  .resume-print-container {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .resume-print-container * {
+    display: revert !important;
+    visibility: visible !important;
   }
 }
 
