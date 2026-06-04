@@ -43,7 +43,6 @@ const MOBILE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
 ];
 
-// 210mm A4 width in pixels at 96dpi
 const A4_WIDTH_PX = 794;
 const A4_HEIGHT_PX = 1123;
 
@@ -54,7 +53,6 @@ function ResumeBuilderInner() {
   const [previewScale, setPreviewScale] = useState(1);
 
   const desktopPreviewRef = useRef<HTMLDivElement>(null);
-  const mobilePrintCloneRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,7 +63,7 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop print
+  // Desktop print — same as always
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -78,16 +76,52 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // Mobile print — prints from the off-screen clone
+  // Mobile print — custom handler writes only the resume into the print iframe
+  const mobilePrintFn = useCallback(async (printIframe: HTMLIFrameElement) => {
+    const cloneEl = document.getElementById("mobile-print-clone");
+    if (!cloneEl) return;
+
+    const iframeDoc = printIframe.contentDocument || printIframe.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>resume</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: white;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            body > * {
+              width: 210mm;
+              min-height: 297mm;
+            }
+          </style>
+          <link href="https://fonts.googleapis.com/css2?family=Georgia&display=swap" rel="stylesheet">
+        </head>
+        <body>
+          ${cloneEl.innerHTML}
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    // Wait for styles to load, then print
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    iframeDoc.defaultView?.print();
+  }, []);
+
   const mobileHandlePrint = useReactToPrint({
-    contentRef: mobilePrintCloneRef,
+    print: mobilePrintFn,
     documentTitle: "resume",
-    pageStyle: `
-      @page { size: A4; margin: 0; }
-      @media print {
-        html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      }
-    `,
   });
 
   const handlePrint = () => {
@@ -101,7 +135,6 @@ function ResumeBuilderInner() {
   const tabs = isMobile ? MOBILE_TABS : DESKTOP_TABS;
   const isPreviewTab = activeTab === "preview";
 
-  // Calculate preview scale on mount and resize
   const updatePreviewScale = useCallback(() => {
     if (previewWrapperRef.current) {
       const wrapperWidth = previewWrapperRef.current.parentElement?.clientWidth ?? 350;
@@ -111,9 +144,8 @@ function ResumeBuilderInner() {
   }, []);
 
   useEffect(() => {
-    if (isPreviewTab && isMobile && previewWrapperRef.current) {
+    if (isPreviewTab && isMobile) {
       updatePreviewScale();
-      // Small delay to ensure DOM is painted
       const timer = setTimeout(updatePreviewScale, 100);
       window.addEventListener("resize", updatePreviewScale);
       return () => {
@@ -140,9 +172,7 @@ function ResumeBuilderInner() {
             <div
               ref={previewWrapperRef}
               className="overflow-hidden w-full"
-              style={{
-                height: `${Math.ceil(A4_HEIGHT_PX * previewScale)}px`,
-              }}
+              style={{ height: `${Math.ceil(A4_HEIGHT_PX * previewScale)}px` }}
             >
               <div
                 style={{
@@ -162,15 +192,16 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Hidden print clone — fully rendered but positioned off-screen for react-to-print */}
+      {/* Off-screen clone — used by mobile-print custom handler */}
       <div
-        ref={mobilePrintCloneRef}
+        id="mobile-print-clone"
         style={{
           position: "absolute",
-          left: "-9999px",
+          left: "-99999px",
           top: "0",
           width: `${A4_WIDTH_PX}px`,
         }}
+        aria-hidden="true"
       >
         <ResumePreview />
       </div>
