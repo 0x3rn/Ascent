@@ -20,38 +20,44 @@
 /* ---- Print Styles — A4 resume export with multi-page support ---- */
 @media print {
   @page {
-    size: A4;
-    /* margin 0 suppresses Safari URL, date, and page number headers/footers */
+    /* REMOVED size: A4; to prevent Safari conflict when user changes paper size */
     margin: 0 !important;
   }
 
+  /* Ensure parent containers don't collapse on layout recalculation */
   html,
   body {
     margin: 0 !important;
     padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
     background: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Force strict A4 width to ignore mobile responsive wrapping */
   .resume-print-container {
     display: block !important;
     visibility: visible !important;
-    position: absolute !important;
-    inset: 0 !important;
 
-    /* Critical: force exact A4 dimensions so mobile prints identically to desktop */
+    /* CHANGED: Use relative instead of absolute to prevent Safari blank-out */
+    position: relative !important;
+
+    /* Keep strict width so mobile print stays identical to desktop */
     width: 210mm !important;
     min-width: 210mm !important;
     max-width: 210mm !important;
 
-    padding: 0 !important;
-    margin: 0 !important;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
+    padding: 15mm 20mm !important;
     box-sizing: border-box !important;
+
+    /* Ensure height flows naturally */
+    min-height: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+
+    /* Center the container if printed on larger paper */
+    margin: 0 auto !important;
   }
 
   .resume-print-container * {

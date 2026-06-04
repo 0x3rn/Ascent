@@ -106,7 +106,7 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
     linkedin: "linkedin.com/in/asterling",
     website: "asterling.co",
     summary:
-      "Product leader with 8+ years of experience driving 0-to-1 products at high-growth SaaS companies. Scaled a B2B platform from $2M to $18M ARR in 2 years. Passionate about data-informed roadmaps, cross-functional leadership, and relentless user focus.",
+      "Product leader with 8+ years of experience driving products at high-growth SaaS companies. Scaled a B2B platform from $2M to $18M ARR in 2 years. Passionate about data-informed roadmaps, cross-functional leadership, and relentless user focus.",
   },
   experience: [
     {
