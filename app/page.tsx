@@ -72,6 +72,7 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Desktop print: use visible right-pane preview (unchanged)
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -95,6 +96,7 @@ function ResumeBuilderInner() {
     `,
   });
 
+  // Mobile print: react-to-print clones the ref node into an iframe, so it prints ONLY that element
   const mobileHandlePrint = useReactToPrint({
     contentRef: mobilePrintRef,
     documentTitle: "resume",
@@ -102,24 +104,6 @@ function ResumeBuilderInner() {
       @page {
         size: A4;
         margin: 0;
-      }
-      @media print {
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: white !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        body > *:not(#print-root) {
-          display: none !important;
-        }
-        #print-root {
-          display: block !important;
-          position: static !important;
-          visibility: visible !important;
-          width: auto !important;
-        }
       }
     `,
   });
@@ -148,24 +132,21 @@ function ResumeBuilderInner() {
       {activeTab === "skills" && <SkillsSection />}
       {isPreviewTab && isMobile && (
         <div className="flex justify-center pt-2">
-          <div className="w-full max-w-[210mm] shadow-lg bg-white">
-            <div className="w-full" style={{ aspectRatio: "210/297" }}>
-              <div
-                className="origin-top-left"
-                style={{
-                  transform: "scale(var(--mobile-preview-scale, 1))",
-                  width: "210mm",
-                }}
-                ref={(el) => {
-                  if (el) {
-                    const parentW = el.parentElement?.offsetWidth ?? 210;
-                    const scale = parentW / 210;
-                    el.style.setProperty("--mobile-preview-scale", String(scale));
-                  }
-                }}
-              >
-                <ResumePreview />
-              </div>
+          <div className="w-full shadow-lg bg-white overflow-hidden">
+            <div
+              ref={(el) => {
+                if (el) {
+                  const parentW = el.parentElement?.offsetWidth ?? 794;
+                  const scale = Math.min(parentW / 794, 1);
+                  el.style.transform = `scale(${scale})`;
+                }
+              }}
+              style={{
+                transformOrigin: "top left",
+                width: "210mm",
+              }}
+            >
+              <ResumePreview />
             </div>
           </div>
         </div>
@@ -175,15 +156,17 @@ function ResumeBuilderInner() {
 
   return (
     <>
+      {/* Hidden print clone — react-to-print reads this for mobile PDF */}
       <div
-        id="print-root"
         ref={mobilePrintRef}
         style={{
-          position: "absolute",
-          top: "-9999px",
-          left: "-9999px",
+          position: "fixed",
+          top: 0,
+          left: 0,
           width: "210mm",
-          visibility: "hidden",
+          opacity: 0,
+          pointerEvents: "none",
+          zIndex: -9999,
         }}
         aria-hidden="true"
       >
@@ -191,6 +174,7 @@ function ResumeBuilderInner() {
       </div>
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
+        {/* ---- Left Pane: Builder ---- */}
         <aside className="no-print w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
@@ -253,6 +237,7 @@ function ResumeBuilderInner() {
           </footer>
         </aside>
 
+        {/* ---- Right Pane: Live Preview (desktop only) ---- */}
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-8">
           <div className="flex flex-col items-center gap-4">
             <div
