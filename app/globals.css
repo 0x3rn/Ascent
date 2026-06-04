@@ -34,18 +34,23 @@
     print-color-adjust: exact !important;
   }
 
-  /* Force the resume preview to display and flow naturally across pages */
+  /* Force strict A4 width to ignore mobile responsive wrapping */
   .resume-print-container {
     display: block !important;
     visibility: visible !important;
     position: absolute !important;
     inset: 0 !important;
-    width: 100% !important;
+
+    /* Critical: force exact A4 dimensions so mobile prints identically to desktop */
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
-    padding: 0 !important;
-    margin: 0 !important;
     box-sizing: border-box !important;
   }
 
