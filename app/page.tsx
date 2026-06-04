@@ -6,6 +6,7 @@ import { ResumeProvider } from "@/lib/resume-context";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { PersonalInfoSection } from "@/components/builder/personal-info-section";
 import { ExperienceSection } from "@/components/builder/experience-section";
+import { ProjectsSection } from "@/components/builder/projects-section";
 import { EducationSection } from "@/components/builder/education-section";
 import { SkillsSection } from "@/components/builder/skills-section";
 import { Button } from "@/components/ui/button";
@@ -15,13 +16,20 @@ import {
   ExternalLink,
   User,
   Briefcase,
+  FolderKanban,
   GraduationCap,
   Wrench,
   Eye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-type TabId = "personal" | "experience" | "education" | "skills" | "preview";
+type TabId =
+  | "personal"
+  | "experience"
+  | "projects"
+  | "education"
+  | "skills"
+  | "preview";
 
 const DESKTOP_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "personal", label: "Personal", icon: <User className="h-4 w-4" /> },
@@ -29,6 +37,11 @@ const DESKTOP_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
     id: "experience",
     label: "Experience",
     icon: <Briefcase className="h-4 w-4" />,
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: <FolderKanban className="h-4 w-4" />,
   },
   {
     id: "education",
@@ -59,7 +72,6 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop: print from visible right-pane preview (same as before)
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -83,7 +95,6 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // Mobile: print from off-screen clone
   const mobileHandlePrint = useReactToPrint({
     contentRef: mobilePrintRef,
     documentTitle: "resume",
@@ -132,6 +143,7 @@ function ResumeBuilderInner() {
     <>
       {activeTab === "personal" && <PersonalInfoSection />}
       {activeTab === "experience" && <ExperienceSection />}
+      {activeTab === "projects" && <ProjectsSection />}
       {activeTab === "education" && <EducationSection />}
       {activeTab === "skills" && <SkillsSection />}
       {isPreviewTab && isMobile && (
@@ -163,7 +175,6 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Off-screen print clone — positioned so react-to-print can capture it */}
       <div
         id="print-root"
         ref={mobilePrintRef}
@@ -180,7 +191,6 @@ function ResumeBuilderInner() {
       </div>
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
-        {/* ---- Left Pane: Builder ---- */}
         <aside className="no-print w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
@@ -243,7 +253,6 @@ function ResumeBuilderInner() {
           </footer>
         </aside>
 
-        {/* ---- Right Pane: Live Preview (desktop only) ---- */}
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-8">
           <div className="flex flex-col items-center gap-4">
             <div

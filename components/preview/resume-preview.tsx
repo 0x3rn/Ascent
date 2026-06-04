@@ -27,7 +27,7 @@ function BulletList({ text }: { text: string }) {
 
 export function ResumePreview() {
   const { data } = useResume();
-  const { personalInfo, experience, education, skills } = data;
+  const { personalInfo, experience, projects, education, skills } = data;
 
   return (
     <div className="w-[210mm] min-h-[297mm] bg-white text-zinc-900 font-[Georgia,'Times New Roman',serif] shadow-2xl print:shadow-none print:w-full print:min-h-screen print:m-0">
@@ -121,6 +121,37 @@ export function ResumePreview() {
                 {exp.bullets && (
                   <div className="mt-1 ml-0">
                     <BulletList text={exp.bullets} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Projects */}
+        {projects.length > 0 && (
+          <section className="mb-4">
+            <h2 className="text-[10pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
+              Project{projects.length !== 1 ? "s" : ""}
+            </h2>
+            {projects.map((proj) => (
+              <div key={proj.id} className="mb-3">
+                <div className="flex justify-between items-baseline flex-wrap gap-1">
+                  <h3 className="text-[10.5pt] font-bold text-zinc-900">
+                    {proj.name || "Project Name"}
+                  </h3>
+                  {proj.link && (
+                    <span className="text-[9pt] text-zinc-500">{proj.link}</span>
+                  )}
+                </div>
+                {proj.skills && (
+                  <p className="text-[9pt] italic text-zinc-600 mt-0.5">
+                    {proj.skills}
+                  </p>
+                )}
+                {proj.bullets && (
+                  <div className="mt-1 ml-0">
+                    <BulletList text={proj.bullets} />
                   </div>
                 )}
               </div>

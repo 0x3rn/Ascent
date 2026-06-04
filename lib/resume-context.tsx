@@ -5,12 +5,14 @@ import type {
   ResumeData,
   PersonalInfo,
   ExperienceItem,
+  ProjectItem,
   EducationItem,
   SkillCategory,
 } from "@/lib/resume-types";
 import {
   DEFAULT_RESUME_DATA,
   EMPTY_EXPERIENCE,
+  EMPTY_PROJECT,
   EMPTY_EDUCATION,
   EMPTY_SKILL_CATEGORY,
 } from "@/lib/resume-types";
@@ -22,6 +24,9 @@ type ResumeAction =
   | { type: "SET_EXPERIENCE_ITEM"; id: string; payload: Partial<ExperienceItem> }
   | { type: "ADD_EXPERIENCE_ITEM" }
   | { type: "REMOVE_EXPERIENCE_ITEM"; id: string }
+  | { type: "SET_PROJECT_ITEM"; id: string; payload: Partial<ProjectItem> }
+  | { type: "ADD_PROJECT_ITEM" }
+  | { type: "REMOVE_PROJECT_ITEM"; id: string }
   | { type: "SET_EDUCATION_ITEM"; id: string; payload: Partial<EducationItem> }
   | { type: "ADD_EDUCATION_ITEM" }
   | { type: "REMOVE_EDUCATION_ITEM"; id: string }
@@ -62,6 +67,29 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
       return {
         ...state,
         experience: state.experience.filter((exp) => exp.id !== action.id),
+      };
+
+    case "SET_PROJECT_ITEM":
+      return {
+        ...state,
+        projects: state.projects.map((proj) =>
+          proj.id === action.id ? { ...proj, ...action.payload } : proj
+        ),
+      };
+
+    case "ADD_PROJECT_ITEM":
+      return {
+        ...state,
+        projects: [
+          ...state.projects,
+          { ...EMPTY_PROJECT, id: crypto.randomUUID() },
+        ],
+      };
+
+    case "REMOVE_PROJECT_ITEM":
+      return {
+        ...state,
+        projects: state.projects.filter((proj) => proj.id !== action.id),
       };
 
     case "SET_EDUCATION_ITEM":
@@ -130,6 +158,9 @@ interface ResumeContextValue {
   updateExperience: (id: string, payload: Partial<ExperienceItem>) => void;
   addExperience: () => void;
   removeExperience: (id: string) => void;
+  updateProject: (id: string, payload: Partial<ProjectItem>) => void;
+  addProject: () => void;
+  removeProject: (id: string) => void;
   updateEducation: (id: string, payload: Partial<EducationItem>) => void;
   addEducation: () => void;
   removeEducation: (id: string) => void;
@@ -164,6 +195,22 @@ export function ResumeProvider({ children }: { children: React.ReactNode }) {
 
   const removeExperience = useCallback(
     (id: string) => dispatch({ type: "REMOVE_EXPERIENCE_ITEM", id }),
+    []
+  );
+
+  const updateProject = useCallback(
+    (id: string, payload: Partial<ProjectItem>) =>
+      dispatch({ type: "SET_PROJECT_ITEM", id, payload }),
+    []
+  );
+
+  const addProject = useCallback(
+    () => dispatch({ type: "ADD_PROJECT_ITEM" }),
+    []
+  );
+
+  const removeProject = useCallback(
+    (id: string) => dispatch({ type: "REMOVE_PROJECT_ITEM", id }),
     []
   );
 
@@ -218,6 +265,9 @@ export function ResumeProvider({ children }: { children: React.ReactNode }) {
         updateExperience,
         addExperience,
         removeExperience,
+        updateProject,
+        addProject,
+        removeProject,
         updateEducation,
         addEducation,
         removeEducation,

@@ -19,6 +19,14 @@ export interface ExperienceItem {
   bullets: string; // markdown-supported, one bullet per line
 }
 
+export interface ProjectItem {
+  id: string;
+  name: string;
+  link: string;
+  skills: string; // comma-separated list
+  bullets: string; // markdown-supported, one bullet per line
+}
+
 export interface EducationItem {
   id: string;
   school: string;
@@ -38,6 +46,7 @@ export interface SkillCategory {
 export interface ResumeData {
   personalInfo: PersonalInfo;
   experience: ExperienceItem[];
+  projects: ProjectItem[];
   education: EducationItem[];
   skills: SkillCategory[];
 }
@@ -60,6 +69,14 @@ export const EMPTY_EXPERIENCE: ExperienceItem = {
   startDate: "",
   endDate: "",
   location: "",
+  bullets: "",
+};
+
+export const EMPTY_PROJECT: ProjectItem = {
+  id: "",
+  name: "",
+  link: "",
+  skills: "",
   bullets: "",
 };
 
@@ -111,6 +128,16 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
       location: "San Francisco, CA",
       bullets:
         "- Launched Stripe Tax in 14 countries, generating $40M+ in first-year revenue\n- Reduced merchant onboarding friction by 60% through a streamlined KYC flow\n- Defined and tracked 15+ North Star metrics across the billing product line",
+    },
+  ],
+  projects: [
+    {
+      id: crypto.randomUUID(),
+      name: "Revenue Dashboard",
+      link: "github.com/asterling/revenue-dash",
+      skills: "React, D3.js, PostgreSQL, AWS Lambda",
+      bullets:
+        "- Built a real-time revenue analytics dashboard processing 2M+ daily transactions\n- Designed the data pipeline to reduce query latency from 4s to under 200ms\n- Collaborated with 3 engineers to ship the MVP in 6 weeks",
     },
   ],
   education: [
