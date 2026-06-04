@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         link: "text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50",
         magic:
-          "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700 shadow-sm dark:bg-indigo-950 dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-indigo-900",
+          "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-white hover:text-zinc-900 hover:border-zinc-300 shadow-sm dark:bg-indigo-950 dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:hover:border-zinc-600",
       },
       size: {
         default: "h-9 px-4 py-2",

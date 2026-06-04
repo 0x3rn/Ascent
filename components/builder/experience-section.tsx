@@ -82,7 +82,7 @@ export function ExperienceSection() {
       {experience.map((exp) => (
         <div
           key={exp.id}
-          className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3"
+          className="p-3 md:p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-zinc-400">
@@ -151,38 +151,40 @@ export function ExperienceSection() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-zinc-500">
-                Bullet Points
-                <span className="ml-1 text-zinc-400 font-normal">
-                  (one per line, Markdown supported)
-                </span>
-              </label>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <AiMagicButton
-                  onClick={() => fixGrammar(exp.bullets)}
-                  onResult={(text) => updateExperience(exp.id, { bullets: text })}
-                  label="Fix Grammar"
-                />
-                <AiMagicButton
-                  onClick={() => enhanceBulletPoint(exp.bullets)}
-                  onResult={(text) => updateExperience(exp.id, { bullets: text })}
-                  label="Enhance"
-                />
-                <Button
-                  variant="magic"
-                  size="sm"
-                  onClick={() =>
-                    setTailorOpenId(tailorOpenId === exp.id ? null : exp.id)
-                  }
-                  className="gap-1.5 shrink-0"
-                >
-                  <Wand2 className="h-3 w-3" />
-                  Tailor to Job
-                </Button>
-              </div>
+          {/* Bullet Points Section */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-zinc-500">
+              Bullet Points
+              <span className="ml-1 text-zinc-400 font-normal">
+                (one per line, Markdown supported)
+              </span>
+            </label>
+
+            {/* AI Toolbar — sits below the label, above the textarea */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <AiMagicButton
+                onClick={() => fixGrammar(exp.bullets)}
+                onResult={(text) => updateExperience(exp.id, { bullets: text })}
+                label="Fix Grammar"
+              />
+              <AiMagicButton
+                onClick={() => enhanceBulletPoint(exp.bullets)}
+                onResult={(text) => updateExperience(exp.id, { bullets: text })}
+                label="Enhance"
+              />
+              <Button
+                variant="magic"
+                size="sm"
+                onClick={() =>
+                  setTailorOpenId(tailorOpenId === exp.id ? null : exp.id)
+                }
+                className="gap-1.5 shrink-0"
+              >
+                <Wand2 className="h-3 w-3" />
+                Tailor to Job
+              </Button>
             </div>
+
             <Textarea
               value={exp.bullets}
               onChange={(e) =>
