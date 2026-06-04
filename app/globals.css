@@ -17,11 +17,12 @@
   display: none;
 }
 
-/* ---- Print Styles — A4 resume export ---- */
+/* ---- Print Styles — A4 resume export with multi-page support ---- */
 @media print {
   @page {
     size: A4;
-    margin: 0;
+    /* margin 0 suppresses Safari URL, date, and page number headers/footers */
+    margin: 0 !important;
   }
 
   html,
@@ -33,17 +34,19 @@
     print-color-adjust: exact !important;
   }
 
-  /* Force the resume preview to display on print even if hidden on mobile */
+  /* Force the resume preview to display and flow naturally across pages */
   .resume-print-container {
     display: block !important;
     visibility: visible !important;
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     height: auto !important;
+    min-height: 0 !important;
     overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .resume-print-container * {
