@@ -53,6 +53,7 @@ function ResumeBuilderInner() {
   const [previewScale, setPreviewScale] = useState(1);
 
   const desktopPreviewRef = useRef<HTMLDivElement>(null);
+  const mobilePrintRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop print — react-to-print with contentRef (unchanged)
+  // Desktop print — react-to-print with contentRef
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -76,49 +77,22 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // Mobile print — popup with Tailwind CDN so all layouts render perfectly
-  const mobilePrint = useCallback(() => {
-    const cloneEl = document.getElementById("print-mobile-resume-clone");
-    if (!cloneEl) return;
-
-    const pw = window.open("", "_blank");
-    if (!pw) { window.print(); return; }
-
-    pw.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Resume</title>
-<script src="https://cdn.tailwindcss.com"><\/script>
-<style>
-  @page { size: A4; margin: 0; }
-  body { margin:0; padding:0; background:#fff; font-family:Georgia,'Times New Roman',serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .print-page { width:210mm; min-height:297mm; background:#fff; }
-  .bullet ul { list-style:disc !important; padding-left:1.25rem !important; }
-  .bullet ul li { margin-bottom:0 !important; }
-  @media print { body { visibility:visible !important; } }
-</style>
-</head><body>
-<div class="print-page">
-<div class="px-[18mm] py-[16mm]">
-${cloneEl.innerHTML}
-</div>
-</div>
-</body></html>`);
-    pw.document.close();
-
-    // Wait for Tailwind CDN to compile, then print
-    const timer = setInterval(() => {
-      if (pw.document.readyState === "complete" || pw.document.readyState === "interactive") {
-        clearInterval(timer);
-        setTimeout(() => { pw.print(); pw.close(); }, 600);
+  // Mobile print — same react-to-print pattern, different ref
+  const mobileHandlePrint = useReactToPrint({
+    contentRef: mobilePrintRef,
+    documentTitle: "resume",
+    pageStyle: `
+      @page { size: A4; margin: 0; }
+      @media print {
+        html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .no-print, .no-print * { display: none !important; }
       }
-    }, 100);
-
-    // Safety timeout: print after 3s no matter what
-    setTimeout(() => { clearInterval(timer); pw.print(); }, 3000);
-  }, []);
+    `,
+  });
 
   const handlePrint = () => {
     if (isMobile) {
-      mobilePrint();
+      mobileHandlePrint();
     } else {
       desktopHandlePrint();
     }
@@ -182,7 +156,17 @@ ${cloneEl.innerHTML}
 
   return (
     <>
-      <div id="print-mobile-resume-clone" style={{ display: "none" }} aria-hidden="true">
+      {/* Off-screen print ref — react-to-print reads this, same as desktop pattern */}
+      <div
+        ref={mobilePrintRef}
+        style={{
+          position: "absolute",
+          left: "-99999px",
+          top: "0",
+          width: `${A4_WIDTH_PX}px`,
+        }}
+        aria-hidden="true"
+      >
         <ResumePreview />
       </div>
 
