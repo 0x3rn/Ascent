@@ -9,7 +9,7 @@ function MarkdownContent({ text }: { text: string }) {
   const html = marked.parse(text, { breaks: true }) as string;
   return (
     <div
-      className="prose prose-sm prose-zinc max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-li:my-0 prose-li:text-[10.5px] prose-li:leading-relaxed"
+      className="text-[11.5px] leading-relaxed text-zinc-700 space-y-0.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_li]:my-0 [&_p]:my-0.5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -19,7 +19,7 @@ function BulletList({ text }: { text: string }) {
   const html = marked.parse(text, { breaks: true }) as string;
   return (
     <div
-      className="text-[10.5px] leading-relaxed text-zinc-700 space-y-0.5 prose-ul:my-0 prose-li:my-0 prose-p:my-0"
+      className="text-[11.5px] leading-relaxed text-zinc-700 space-y-0.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-0.5 [&_li]:my-0 [&_p]:my-0"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -35,15 +35,15 @@ export function ResumePreview() {
       <div className="px-[18mm] py-[16mm] print:px-[18mm] print:py-[16mm]">
         {/* Header */}
         <header className="text-center mb-5">
-          <h1 className="text-[22pt] font-bold tracking-tight text-zinc-900 leading-tight">
+          <h1 className="text-[23pt] font-bold tracking-tight text-zinc-900 leading-tight">
             {personalInfo.fullName || "Your Name"}
           </h1>
           {personalInfo.title && (
-            <p className="text-[10.5pt] text-zinc-600 mt-0.5">
+            <p className="text-[11.5pt] text-zinc-600 mt-0.5">
               {personalInfo.title}
             </p>
           )}
-          <div className="flex items-center justify-center gap-3 mt-1.5 text-[9pt] text-zinc-500 flex-wrap">
+          <div className="flex items-center justify-center gap-3 mt-1.5 text-[10pt] text-zinc-500 flex-wrap">
             {personalInfo.email && (
               <span className="flex items-center gap-1">
                 <Mail className="h-3 w-3" />
@@ -80,7 +80,7 @@ export function ResumePreview() {
         {/* Summary */}
         {personalInfo.summary && (
           <section className="mb-4">
-            <h2 className="text-[10pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
+            <h2 className="text-[11pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
               Professional Summary
             </h2>
             <MarkdownContent text={personalInfo.summary} />
@@ -90,14 +90,14 @@ export function ResumePreview() {
         {/* Experience */}
         {experience.length > 0 && (
           <section className="mb-4">
-            <h2 className="text-[10pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
+            <h2 className="text-[11pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
               Professional Experience
             </h2>
             {experience.map((exp) => (
               <div key={exp.id} className="mb-3">
                 <div className="flex justify-between items-baseline flex-wrap gap-1">
                   <div>
-                    <h3 className="text-[10.5pt] font-bold text-zinc-900">
+                    <h3 className="text-[11.5pt] font-bold text-zinc-900">
                       {exp.role || "Role"}
                       {exp.company && (
                         <span className="font-normal text-zinc-600">
@@ -107,7 +107,7 @@ export function ResumePreview() {
                       )}
                     </h3>
                   </div>
-                  <div className="text-[9pt] text-zinc-500">
+                  <div className="text-[10pt] text-zinc-500">
                     {exp.startDate && <span>{exp.startDate}</span>}
                     {exp.startDate && exp.endDate && (
                       <span> &ndash; </span>
@@ -131,21 +131,21 @@ export function ResumePreview() {
         {/* Projects */}
         {projects.length > 0 && (
           <section className="mb-4">
-            <h2 className="text-[10pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
+            <h2 className="text-[11pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
               Project{projects.length !== 1 ? "s" : ""}
             </h2>
             {projects.map((proj) => (
               <div key={proj.id} className="mb-3">
                 <div className="flex justify-between items-baseline flex-wrap gap-1">
-                  <h3 className="text-[10.5pt] font-bold text-zinc-900">
+                  <h3 className="text-[11.5pt] font-bold text-zinc-900">
                     {proj.name || "Project Name"}
                   </h3>
                   {proj.link && (
-                    <span className="text-[9pt] text-zinc-500">{proj.link}</span>
+                    <span className="text-[10pt] text-zinc-500">{proj.link}</span>
                   )}
                 </div>
                 {proj.skills && (
-                  <p className="text-[9pt] italic text-zinc-600 mt-0.5">
+                  <p className="text-[10pt] italic text-zinc-600 mt-0.5">
                     {proj.skills}
                   </p>
                 )}
@@ -162,7 +162,7 @@ export function ResumePreview() {
         {/* Education */}
         {education.length > 0 && (
           <section className="mb-4">
-            <h2 className="text-[10pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
+            <h2 className="text-[11pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
               Education
             </h2>
             {education.map((edu) => (
@@ -171,17 +171,17 @@ export function ResumePreview() {
                 className="flex justify-between items-baseline flex-wrap gap-1 mb-1.5"
               >
                 <div>
-                  <h3 className="text-[10.5pt] font-bold text-zinc-900">
+                  <h3 className="text-[11.5pt] font-bold text-zinc-900">
                     {edu.school || "School"}
                   </h3>
-                  <p className="text-[9.5pt] text-zinc-600">
+                  <p className="text-[10.5pt] text-zinc-600">
                     {edu.degree && <span>{edu.degree}</span>}
                     {edu.degree && edu.field && <span> in </span>}
                     {edu.field && <span>{edu.field}</span>}
                     {edu.gpa && <span> &mdash; GPA: {edu.gpa}</span>}
                   </p>
                 </div>
-                <div className="text-[9pt] text-zinc-500">
+                <div className="text-[10pt] text-zinc-500">
                   {edu.startDate && <span>{edu.startDate}</span>}
                   {edu.startDate && edu.endDate && <span> &ndash; </span>}
                   {edu.endDate && <span>{edu.endDate}</span>}
@@ -194,12 +194,12 @@ export function ResumePreview() {
         {/* Skills */}
         {skills.length > 0 && (
           <section>
-            <h2 className="text-[10pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
+            <h2 className="text-[11pt] font-bold uppercase tracking-[0.15em] text-zinc-800 border-b border-zinc-300 pb-1 mb-2">
               Skills
             </h2>
             {skills.map((sk) => (
               <div key={sk.id} className="mb-1.5">
-                <p className="text-[10pt] text-zinc-900">
+                <p className="text-[11pt] text-zinc-900">
                   {sk.category && (
                     <span className="font-semibold">{sk.category}: </span>
                   )}

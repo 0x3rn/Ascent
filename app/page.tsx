@@ -63,7 +63,7 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop print — react-to-print with contentRef (proven working)
+  // Desktop print — react-to-print with contentRef (unchanged)
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -76,10 +76,49 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // Mobile print — plain window.print() since global print CSS handles everything
+  // Mobile print — popup with Tailwind CDN so all layouts render perfectly
+  const mobilePrint = useCallback(() => {
+    const cloneEl = document.getElementById("print-mobile-resume-clone");
+    if (!cloneEl) return;
+
+    const pw = window.open("", "_blank");
+    if (!pw) { window.print(); return; }
+
+    pw.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Resume</title>
+<script src="https://cdn.tailwindcss.com"><\/script>
+<style>
+  @page { size: A4; margin: 0; }
+  body { margin:0; padding:0; background:#fff; font-family:Georgia,'Times New Roman',serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .print-page { width:210mm; min-height:297mm; background:#fff; }
+  .bullet ul { list-style:disc !important; padding-left:1.25rem !important; }
+  .bullet ul li { margin-bottom:0 !important; }
+  @media print { body { visibility:visible !important; } }
+</style>
+</head><body>
+<div class="print-page">
+<div class="px-[18mm] py-[16mm]">
+${cloneEl.innerHTML}
+</div>
+</div>
+</body></html>`);
+    pw.document.close();
+
+    // Wait for Tailwind CDN to compile, then print
+    const timer = setInterval(() => {
+      if (pw.document.readyState === "complete" || pw.document.readyState === "interactive") {
+        clearInterval(timer);
+        setTimeout(() => { pw.print(); pw.close(); }, 600);
+      }
+    }, 100);
+
+    // Safety timeout: print after 3s no matter what
+    setTimeout(() => { clearInterval(timer); pw.print(); }, 3000);
+  }, []);
+
   const handlePrint = () => {
     if (isMobile) {
-      window.print();
+      mobilePrint();
     } else {
       desktopHandlePrint();
     }
@@ -108,9 +147,7 @@ function ResumeBuilderInner() {
     }
   }, [isPreviewTab, isMobile, updatePreviewScale]);
 
-  if (!hasMounted) {
-    return null;
-  }
+  if (!hasMounted) return null;
 
   const tabContent = (
     <>
@@ -145,7 +182,7 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      <div id="print-mobile-resume-clone" aria-hidden="true">
+      <div id="print-mobile-resume-clone" style={{ display: "none" }} aria-hidden="true">
         <ResumePreview />
       </div>
 
@@ -157,19 +194,11 @@ function ResumeBuilderInner() {
                 <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-white" />
               </div>
               <div>
-                <h1 className="text-xs md:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
-                  Ascent
-                </h1>
-                <p className="text-[10px] md:text-[11px] text-zinc-500 leading-tight">
-                  AI Resume Builder
-                </p>
+                <h1 className="text-xs md:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">Ascent</h1>
+                <p className="text-[10px] md:text-[11px] text-zinc-500 leading-tight">AI Resume Builder</p>
               </div>
             </div>
-            <Button
-              onClick={handlePrint}
-              size="sm"
-              className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3"
-            >
+            <Button onClick={handlePrint} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3">
               <Download className="h-3 w-3 md:h-3.5 md:w-3.5" />
               <span className="hidden sm:inline">Download PDF</span>
               <span className="sm:hidden">PDF</span>
@@ -193,20 +222,11 @@ function ResumeBuilderInner() {
             ))}
           </nav>
 
-          <div className="flex-1 overflow-y-auto p-3 md:p-5">
-            {tabContent}
-          </div>
+          <div className="flex-1 overflow-y-auto p-3 md:p-5">{tabContent}</div>
 
           <footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3">
-            <p className="text-[10px] md:text-[11px] text-zinc-400">
-              Powered by DeepSeek AI
-            </p>
-            <a
-              href="https://github.com/0x3rn/Ascent"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-            >
+            <p className="text-[10px] md:text-[11px] text-zinc-400">Powered by DeepSeek AI</p>
+            <a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
               <ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </a>
           </footer>
@@ -214,10 +234,7 @@ function ResumeBuilderInner() {
 
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-8">
           <div className="flex flex-col items-center gap-4">
-            <div
-              ref={desktopPreviewRef}
-              className="origin-top shadow-2xl print:shadow-none"
-            >
+            <div ref={desktopPreviewRef} className="origin-top shadow-2xl print:shadow-none">
               <ResumePreview />
             </div>
           </div>
