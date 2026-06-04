@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useReactToPrint } from "react-to-print";
 import { ResumeProvider } from "@/lib/resume-context";
 import { ResumePreview } from "@/components/preview/resume-preview";
@@ -21,7 +21,6 @@ import {
   Wrench,
   Eye,
 } from "lucide-react";
-import { useState, useEffect } from "react";
 
 type TabId =
   | "personal"
@@ -33,21 +32,9 @@ type TabId =
 
 const DESKTOP_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "personal", label: "Personal", icon: <User className="h-4 w-4" /> },
-  {
-    id: "experience",
-    label: "Experience",
-    icon: <Briefcase className="h-4 w-4" />,
-  },
-  {
-    id: "projects",
-    label: "Projects",
-    icon: <FolderKanban className="h-4 w-4" />,
-  },
-  {
-    id: "education",
-    label: "Education",
-    icon: <GraduationCap className="h-4 w-4" />,
-  },
+  { id: "experience", label: "Experience", icon: <Briefcase className="h-4 w-4" /> },
+  { id: "projects", label: "Projects", icon: <FolderKanban className="h-4 w-4" /> },
+  { id: "education", label: "Education", icon: <GraduationCap className="h-4 w-4" /> },
   { id: "skills", label: "Skills", icon: <Wrench className="h-4 w-4" /> },
 ];
 
@@ -56,13 +43,19 @@ const MOBILE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
 ];
 
+// 210mm A4 width in pixels at 96dpi
+const A4_WIDTH_PX = 794;
+const A4_HEIGHT_PX = 1123;
+
 function ResumeBuilderInner() {
   const [activeTab, setActiveTab] = useState<TabId>("personal");
   const [isMobile, setIsMobile] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
 
   const desktopPreviewRef = useRef<HTMLDivElement>(null);
-  const mobilePrintRef = useRef<HTMLDivElement>(null);
+  const mobilePrintCloneRef = useRef<HTMLDivElement>(null);
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -72,38 +65,27 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop print: use visible right-pane preview (unchanged)
+  // Desktop print
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
     pageStyle: `
-      @page {
-        size: A4;
-        margin: 0;
-      }
+      @page { size: A4; margin: 0; }
       @media print {
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: white !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .no-print, .no-print * {
-          display: none !important;
-        }
+        html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .no-print, .no-print * { display: none !important; }
       }
     `,
   });
 
-  // Mobile print: react-to-print clones the ref node into an iframe, so it prints ONLY that element
+  // Mobile print — prints from the off-screen clone
   const mobileHandlePrint = useReactToPrint({
-    contentRef: mobilePrintRef,
+    contentRef: mobilePrintCloneRef,
     documentTitle: "resume",
     pageStyle: `
-      @page {
-        size: A4;
-        margin: 0;
+      @page { size: A4; margin: 0; }
+      @media print {
+        html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       }
     `,
   });
@@ -119,6 +101,28 @@ function ResumeBuilderInner() {
   const tabs = isMobile ? MOBILE_TABS : DESKTOP_TABS;
   const isPreviewTab = activeTab === "preview";
 
+  // Calculate preview scale on mount and resize
+  const updatePreviewScale = useCallback(() => {
+    if (previewWrapperRef.current) {
+      const wrapperWidth = previewWrapperRef.current.parentElement?.clientWidth ?? 350;
+      const scale = Math.min(wrapperWidth / A4_WIDTH_PX, 1);
+      setPreviewScale(scale);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isPreviewTab && isMobile && previewWrapperRef.current) {
+      updatePreviewScale();
+      // Small delay to ensure DOM is painted
+      const timer = setTimeout(updatePreviewScale, 100);
+      window.addEventListener("resize", updatePreviewScale);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("resize", updatePreviewScale);
+      };
+    }
+  }, [isPreviewTab, isMobile, updatePreviewScale]);
+
   if (!hasMounted) {
     return null;
   }
@@ -132,21 +136,23 @@ function ResumeBuilderInner() {
       {activeTab === "skills" && <SkillsSection />}
       {isPreviewTab && isMobile && (
         <div className="flex justify-center pt-2">
-          <div className="w-full shadow-lg bg-white overflow-hidden">
+          <div className="w-full shadow-lg bg-white">
             <div
-              ref={(el) => {
-                if (el) {
-                  const parentW = el.parentElement?.offsetWidth ?? 794;
-                  const scale = Math.min(parentW / 794, 1);
-                  el.style.transform = `scale(${scale})`;
-                }
-              }}
+              ref={previewWrapperRef}
+              className="overflow-hidden w-full"
               style={{
-                transformOrigin: "top left",
-                width: "210mm",
+                height: `${Math.ceil(A4_HEIGHT_PX * previewScale)}px`,
               }}
             >
-              <ResumePreview />
+              <div
+                style={{
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top left",
+                  width: `${A4_WIDTH_PX}px`,
+                }}
+              >
+                <ResumePreview />
+              </div>
             </div>
           </div>
         </div>
@@ -156,19 +162,15 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Hidden print clone — react-to-print reads this for mobile PDF */}
+      {/* Hidden print clone — fully rendered but positioned off-screen for react-to-print */}
       <div
-        ref={mobilePrintRef}
+        ref={mobilePrintCloneRef}
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "210mm",
-          opacity: 0,
-          pointerEvents: "none",
-          zIndex: -9999,
+          position: "absolute",
+          left: "-9999px",
+          top: "0",
+          width: `${A4_WIDTH_PX}px`,
         }}
-        aria-hidden="true"
       >
         <ResumePreview />
       </div>
