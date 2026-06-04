@@ -160,17 +160,19 @@ export function ExperienceSection() {
               </span>
             </label>
 
-            {/* AI Toolbar — sits below the label, above the textarea */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            {/* AI Toolbar — single row, no wrapping, compact on mobile */}
+            <div className="flex items-center gap-1 flex-nowrap">
               <AiMagicButton
                 onClick={() => fixGrammar(exp.bullets)}
                 onResult={(text) => updateExperience(exp.id, { bullets: text })}
                 label="Fix Grammar"
+                className="text-[10px] px-1.5 h-7"
               />
               <AiMagicButton
                 onClick={() => enhanceBulletPoint(exp.bullets)}
                 onResult={(text) => updateExperience(exp.id, { bullets: text })}
                 label="Enhance"
+                className="text-[10px] px-1.5 h-7"
               />
               <Button
                 variant="magic"
@@ -178,10 +180,11 @@ export function ExperienceSection() {
                 onClick={() =>
                   setTailorOpenId(tailorOpenId === exp.id ? null : exp.id)
                 }
-                className="gap-1.5 shrink-0"
+                className="gap-1 shrink-0 text-[10px] px-1.5 h-7"
               >
                 <Wand2 className="h-3 w-3" />
-                Tailor to Job
+                <span className="hidden xs:inline">Tailor to Job</span>
+                <span className="xs:hidden">Tailor</span>
               </Button>
             </div>
 
