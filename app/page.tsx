@@ -19,11 +19,11 @@ import {
   Wrench,
   Eye,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type TabId = "personal" | "experience" | "education" | "skills" | "preview";
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+const DESKTOP_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "personal", label: "Personal", icon: <User className="h-4 w-4" /> },
   {
     id: "experience",
@@ -36,20 +36,32 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
     icon: <GraduationCap className="h-4 w-4" />,
   },
   { id: "skills", label: "Skills", icon: <Wrench className="h-4 w-4" /> },
+];
+
+const MOBILE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  ...DESKTOP_TABS,
   { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
 ];
 
 function ResumeBuilderInner() {
   const [activeTab, setActiveTab] = useState<TabId>("personal");
+  const [isMobile, setIsMobile] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
-  // Desktop preview ref (for visual display only)
   const desktopPreviewRef = useRef<HTMLDivElement>(null);
+  const mobilePrintRef = useRef<HTMLDivElement>(null);
 
-  // Hidden print-only ref — contains ONLY the ResumePreview, never shown in UI
-  const printRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setHasMounted(true);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
+  // Desktop: print from visible right-pane preview (same as before)
+  const desktopHandlePrint = useReactToPrint({
+    contentRef: desktopPreviewRef,
     documentTitle: "resume",
     pageStyle: `
       @page {
@@ -64,15 +76,57 @@ function ResumeBuilderInner() {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        /* Hide literally everything except the print container */
-        body > *:not(.print-container-wrapper) {
+        .no-print, .no-print * {
           display: none !important;
         }
       }
     `,
   });
 
+  // Mobile: print from off-screen clone
+  const mobileHandlePrint = useReactToPrint({
+    contentRef: mobilePrintRef,
+    documentTitle: "resume",
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      @media print {
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body > *:not(#print-root) {
+          display: none !important;
+        }
+        #print-root {
+          display: block !important;
+          position: static !important;
+          visibility: visible !important;
+          width: auto !important;
+        }
+      }
+    `,
+  });
+
+  const handlePrint = () => {
+    if (isMobile) {
+      mobileHandlePrint();
+    } else {
+      desktopHandlePrint();
+    }
+  };
+
+  const tabs = isMobile ? MOBILE_TABS : DESKTOP_TABS;
   const isPreviewTab = activeTab === "preview";
+
+  if (!hasMounted) {
+    return null;
+  }
 
   const tabContent = (
     <>
@@ -80,29 +134,25 @@ function ResumeBuilderInner() {
       {activeTab === "experience" && <ExperienceSection />}
       {activeTab === "education" && <EducationSection />}
       {activeTab === "skills" && <SkillsSection />}
-      {isPreviewTab && (
+      {isPreviewTab && isMobile && (
         <div className="flex justify-center pt-2">
-          {/* Mobile: scale A4 to fit viewport using max-width */}
-          <div className="w-full max-w-[210mm] shadow-2xl print:shadow-none">
-            <div className="relative w-full" style={{ aspectRatio: "210/297" }}>
-              <div className="absolute inset-0 overflow-hidden">
-                <div
-                  style={{
-                    transform: "scale(var(--preview-scale, 1))",
-                    transformOrigin: "top left",
-                    width: "210mm",
-                  }}
-                  ref={(el) => {
-                    if (el) {
-                      const parentW = el.parentElement?.offsetWidth ?? 210;
-                      const scale = Math.min(parentW / 210, 1);
-                      el.style.setProperty("--preview-scale", String(scale));
-                      el.style.setProperty("width", "210mm");
-                    }
-                  }}
-                >
-                  <ResumePreview />
-                </div>
+          <div className="w-full max-w-[210mm] shadow-lg bg-white">
+            <div className="w-full" style={{ aspectRatio: "210/297" }}>
+              <div
+                className="origin-top-left"
+                style={{
+                  transform: "scale(var(--mobile-preview-scale, 1))",
+                  width: "210mm",
+                }}
+                ref={(el) => {
+                  if (el) {
+                    const parentW = el.parentElement?.offsetWidth ?? 210;
+                    const scale = parentW / 210;
+                    el.style.setProperty("--mobile-preview-scale", String(scale));
+                  }
+                }}
+              >
+                <ResumePreview />
               </div>
             </div>
           </div>
@@ -113,17 +163,25 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Hidden print-only container — rendered outside the builder layout */}
-      <div className="print-container-wrapper" style={{ display: "none" }}>
-        <div ref={printRef}>
-          <ResumePreview />
-        </div>
+      {/* Off-screen print clone — positioned so react-to-print can capture it */}
+      <div
+        id="print-root"
+        ref={mobilePrintRef}
+        style={{
+          position: "absolute",
+          top: "-9999px",
+          left: "-9999px",
+          width: "210mm",
+          visibility: "hidden",
+        }}
+        aria-hidden="true"
+      >
+        <ResumePreview />
       </div>
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
-        {/* ---- Left Pane: Builder (full-width on mobile, fixed on desktop) ---- */}
+        {/* ---- Left Pane: Builder ---- */}
         <aside className="no-print w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
-          {/* Builder Header */}
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
               <div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
@@ -139,7 +197,7 @@ function ResumeBuilderInner() {
               </div>
             </div>
             <Button
-              onClick={() => handlePrint()}
+              onClick={handlePrint}
               size="sm"
               className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3"
             >
@@ -149,9 +207,8 @@ function ResumeBuilderInner() {
             </Button>
           </header>
 
-          {/* Tab Navigation — horizontally scrollable on mobile */}
           <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -167,12 +224,10 @@ function ResumeBuilderInner() {
             ))}
           </nav>
 
-          {/* Builder Content */}
           <div className="flex-1 overflow-y-auto p-3 md:p-5">
             {tabContent}
           </div>
 
-          {/* Builder Footer */}
           <footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3">
             <p className="text-[10px] md:text-[11px] text-zinc-400">
               Powered by DeepSeek AI
@@ -188,7 +243,7 @@ function ResumeBuilderInner() {
           </footer>
         </aside>
 
-        {/* ---- Right Pane: Live Preview (hidden on mobile — preview tab used instead) ---- */}
+        {/* ---- Right Pane: Live Preview (desktop only) ---- */}
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-8">
           <div className="flex flex-col items-center gap-4">
             <div
