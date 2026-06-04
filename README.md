@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ascent — AI-Powered Resume Builder
+
+A premium, production-ready resume builder that combines a live A4 preview with AI-powered writing assistance. Built with Next.js, Tailwind CSS, and DeepSeek AI.
+
+## Features
+
+- **Live A4 Preview** — See exactly how your resume looks on paper as you type
+- **AI-Powered Writing** — Enhance bullet points, fix grammar, and tailor to job descriptions
+- **Secure by Design** — All AI calls use Next.js Server Actions; API key never exposed to the client
+- **PDF Export** — One-click A4 PDF download with proper print-optimized CSS
+- **ATS-Friendly** — Classic serif typography optimized for applicant tracking systems
+- **Markdown Support** — Summary and bullet points support Markdown formatting
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router) |
+| Styling | Tailwind CSS v4 |
+| Components | shadcn/ui + Lucide React |
+| State | React Context + useReducer |
+| AI | DeepSeek (via OpenAI-compatible SDK) |
+| Markdown | marked |
+| PDF | react-to-print |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+
+- A [DeepSeek API key](https://platform.deepseek.com/api_keys)
+
+### Installation
+
+```bash
+git clone https://github.com/0x3rn/Ascent.git
+cd Ascent
+npm install
+```
+
+### Environment Variables
+
+Copy the example env file and add your DeepSeek API key:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Edit `.env.local`:
+
+```
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## AI Features
 
-To learn more about Next.js, take a look at the following resources:
+Three distinct AI actions available on every experience bullet section:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Action | Description |
+|--------|-------------|
+| **Fix Grammar** | Corrects spelling, grammar, and punctuation; improves sentence flow |
+| **Enhance** | Rewrites bullets with strong action verbs and metric-driven phrasing |
+| **Tailor to Job** | Rewords bullets to match keywords from a target job description |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+There's also an **Enhance Summary** action for the professional summary field.
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+├── app/
+│   ├── actions/resume-ai.ts        # Secure DeepSeek server actions
+│   ├── globals.css                 # Tailwind, print styles, typography
+│   ├── layout.tsx                  # Root layout
+│   └── page.tsx                    # Split-screen workspace
+├── components/
+│   ├── builder/                    # Form sections (Personal, Experience, Education, Skills)
+│   ├── preview/                    # A4 preview + PDF export
+│   └── ui/                         # shadcn/ui components
+├── lib/
+│   ├── resume-context.tsx          # Global state management
+│   ├── resume-types.ts             # TypeScript schema + defaults
+│   └── utils.ts                    # Utility functions
+└── public/                         # Static assets
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
