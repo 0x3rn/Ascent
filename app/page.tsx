@@ -64,7 +64,6 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop print — react-to-print with contentRef
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -77,7 +76,6 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // Mobile print — same react-to-print pattern, different ref
   const mobileHandlePrint = useReactToPrint({
     contentRef: mobilePrintRef,
     documentTitle: "resume",
@@ -156,19 +154,11 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Off-screen print ref — react-to-print reads this, same as desktop pattern */}
-      <div
-        ref={mobilePrintRef}
-        style={{
-          position: "absolute",
-          left: "-99999px",
-          top: "0",
-          width: `${A4_WIDTH_PX}px`,
-        }}
-        aria-hidden="true"
-      >
-        <ResumePreview />
-      </div>
+      {isMobile && (
+        <div ref={mobilePrintRef} className="h-0 overflow-hidden" aria-hidden="true">
+          <ResumePreview />
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
         <aside className="no-print w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
