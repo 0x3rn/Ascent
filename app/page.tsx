@@ -53,6 +53,7 @@ function ResumeBuilderInner() {
   const [previewScale, setPreviewScale] = useState(1);
 
   const desktopPreviewRef = useRef<HTMLDivElement>(null);
+  const mobilePrintRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Desktop print — same as always
+  // Desktop print
   const desktopHandlePrint = useReactToPrint({
     contentRef: desktopPreviewRef,
     documentTitle: "resume",
@@ -76,52 +77,16 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // Mobile print — custom handler writes only the resume into the print iframe
-  const mobilePrintFn = useCallback(async (printIframe: HTMLIFrameElement) => {
-    const cloneEl = document.getElementById("mobile-print-clone");
-    if (!cloneEl) return;
-
-    const iframeDoc = printIframe.contentDocument || printIframe.contentWindow?.document;
-    if (!iframeDoc) return;
-
-    iframeDoc.open();
-    iframeDoc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>resume</title>
-          <style>
-            @page { size: A4; margin: 0; }
-            html, body {
-              margin: 0;
-              padding: 0;
-              background: white;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            body > * {
-              width: 210mm;
-              min-height: 297mm;
-            }
-          </style>
-          <link href="https://fonts.googleapis.com/css2?family=Georgia&display=swap" rel="stylesheet">
-        </head>
-        <body>
-          ${cloneEl.innerHTML}
-        </body>
-      </html>
-    `);
-    iframeDoc.close();
-
-    // Wait for styles to load, then print
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    iframeDoc.defaultView?.print();
-  }, []);
-
+  // Mobile print — uses the off-screen clone as contentRef
   const mobileHandlePrint = useReactToPrint({
-    print: mobilePrintFn,
+    contentRef: mobilePrintRef,
     documentTitle: "resume",
+    pageStyle: `
+      @page { size: A4; margin: 0; }
+      @media print {
+        html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      }
+    `,
   });
 
   const handlePrint = () => {
@@ -192,9 +157,9 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {/* Off-screen clone — used by mobile-print custom handler */}
+      {/* Off-screen clone used by mobile print ref */}
       <div
-        id="mobile-print-clone"
+        ref={mobilePrintRef}
         style={{
           position: "absolute",
           left: "-99999px",
