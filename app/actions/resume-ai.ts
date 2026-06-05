@@ -130,3 +130,112 @@ Return ONLY the shortened cover letter body text. Each paragraph separated by a 
   const maxTokens: number = currentText.length > 200 ? 512 : 256;
   return runDeepSeek(prompt, maxTokens);
 }
+
+// ---- SMART PASTE ----
+export async function parseRawResume(rawText: string): Promise<string> {
+  const prompt = `You are an expert data extractor. Extract the user's details from the following raw text (LinkedIn export, old resume, etc.) and return ONLY a strict JSON object matching this TypeScript schema. No markdown, no conversational text, no code fences.
+
+interface ResumeData {
+  personalInfo: {
+    fullName: string;
+    title: string;
+    email: string;
+    phone: string;
+    location: string;
+    linkedin: string;
+    website: string;
+    summary: string;
+  };
+  experience: Array<{
+    company: string;
+    role: string;
+    startDate: string;
+    endDate: string;
+    location: string;
+    bullets: string; // bullet points separated by newlines starting with "- "
+  }>;
+  education: Array<{
+    school: string;
+    degree: string;
+    field: string;
+    startDate: string;
+    endDate: string;
+    gpa: string;
+  }>;
+  skills: Array<{
+    category: string;
+    skills: string; // comma-separated
+  }>;
+  projects: Array<{
+    name: string;
+    link: string;
+    skills: string;
+    bullets: string;
+  }>;
+}
+
+Raw text to parse:
+"""
+${rawText}
+"""
+
+Return ONLY the JSON object. No markdown code fences, no conversational text.`;
+
+  const result = await runDeepSeek(prompt, 2048);
+  // Strip any markdown code fences if the AI wrapped it
+  return result.replace(/^```json\s*|```$/g, "").trim();
+}
+
+// ---- ATS SCORING ----
+export async function scoreATS(
+  resumeData: string,
+  jobDescription: string
+): Promise<string> {
+  const prompt = `You are an ATS (Applicant Tracking System). Compare the following resume data to the Job Description. Return ONLY a strict JSON object containing: 'score' (number 0-100), 'missingKeywords' (array of strings representing critical missing skills/keywords), and 'quickTip' (1 actionable sentence). No markdown, no code fences.
+
+Resume Data:
+"""
+${resumeData}
+"""
+
+Job Description:
+"""
+${jobDescription}
+"""
+
+Return ONLY the JSON object.`;
+
+  const result = await runDeepSeek(prompt, 1024);
+  return result.replace(/^```json\s*|```$/g, "").trim();
+}
+
+// ---- INTERVIEW PREP ----
+export async function generateInterviewPrep(
+  targetRole: string,
+  companyName: string,
+  candidateBackground: string
+): Promise<string> {
+  const prompt = `You are an expert interview coach. Generate 10 specific behavioral/technical interview questions that a ${targetRole} candidate would face at ${companyName}. For each question, provide a STAR method answer outline drawing from their exact experience.
+
+Here is the candidate's background:
+"""
+${candidateBackground}
+"""
+
+Format your response in Markdown:
+## Interview Preparation for ${targetRole} at ${companyName}
+
+### Question 1: [Type - Behavioral/Technical]
+**Question:** [The question]
+**STAR Answer Outline:**
+- **S**ituation: [context from their experience]
+- **T**ask: [what needed to be done]
+- **A**ction: [specific steps they should mention]
+- **R**esult: [quantifiable outcome]
+
+(Repeat for questions 2-10)
+
+CRITICAL: Do NOT use em-dashes. Return ONLY the formatted guide. No conversational filler.`;
+
+  return runDeepSeek(prompt, 2048);
+}
