@@ -1,32 +1,98 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #171717;
+  --color-background: hsl(0, 0%, 100%);
+  --color-foreground: hsl(240, 10%, 3.9%);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --breakpoint-xs: 380px;
+
+  /* shadcn/ui color tokens */
+  --color-border: hsl(240, 5.9%, 90%);
+  --color-input: hsl(240, 5.9%, 90%);
+  --color-ring: hsl(243, 75%, 59%);
+  --color-primary: hsl(243, 75%, 59%);
+  --color-primary-foreground: hsl(0, 0%, 100%);
+  --color-secondary: hsl(240, 4.8%, 95.9%);
+  --color-secondary-foreground: hsl(240, 5.9%, 10%);
+  --color-destructive: hsl(0, 84.2%, 60.2%);
+  --color-destructive-foreground: hsl(0, 0%, 98%);
+  --color-muted: hsl(240, 4.8%, 95.9%);
+  --color-muted-foreground: hsl(240, 3.8%, 46.1%);
+  --color-accent: hsl(240, 4.8%, 95.9%);
+  --color-accent-foreground: hsl(240, 5.9%, 10%);
+  --color-popover: hsl(0, 0%, 100%);
+  --color-popover-foreground: hsl(240, 10%, 3.9%);
+  --color-card: hsl(0, 0%, 100%);
+  --color-card-foreground: hsl(240, 10%, 3.9%);
 }
 
-/* ---- Hide scrollbar for horizontally-scrollable tabs ---- */
+/* ---- Premium "Midnight & Frost" Palette ---- */
+:root {
+  --background: 0 0% 100%; /* Pure White */
+  --foreground: 240 10% 3.9%; /* Zinc 950 */
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 243 75% 59%; /* Indigo 600 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 243 75% 59%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 240 10% 3.9%; /* Zinc 950 - Deep Midnight */
+  --foreground: 0 0% 98%; /* Frost White */
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 243 75% 65%; /* Indigo 500 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 243 75% 65%;
+}
+
+/* ---- Butter-Smooth Theme Transitions ---- */
+*,
+*::before,
+*::after {
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Hide scrollbar for tabs ---- */
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* ---- Print Styles — A4 resume export with multi-page support ---- */
+/* ---- Print Styles — A4 resume export ---- */
 @media print {
-  @page {
-    /* REMOVED size: A4; to prevent Safari conflict when user changes paper size */
-    margin: 0 !important;
-  }
-
-  /* Ensure parent containers don't collapse on layout recalculation */
-  html,
-  body {
+  @page { margin: 0 !important; }
+  html, body {
     margin: 0 !important;
     padding: 0 !important;
     height: auto !important;
@@ -35,50 +101,32 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-
   .resume-print-container {
     display: block !important;
     visibility: visible !important;
-
-    /* CHANGED: Use relative instead of absolute to prevent Safari blank-out */
     position: relative !important;
-
-    /* Keep strict width so mobile print stays identical to desktop */
     width: 210mm !important;
     min-width: 210mm !important;
     max-width: 210mm !important;
-
     padding: 15mm 20mm !important;
     box-sizing: border-box !important;
-
-    /* Ensure height flows naturally */
     min-height: 100% !important;
     height: auto !important;
     overflow: visible !important;
-
-    /* Center the container if printed on larger paper */
     margin: 0 auto !important;
+    background: white !important;
+    color: black !important;
   }
-
   .resume-print-container * {
     display: revert !important;
     visibility: visible !important;
   }
 }
 
-/* ---- Scrollbar styling for desktop ---- */
+/* ---- Scrollbar styling ---- */
 @media (min-width: 768px) {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #d4d4d8;
-    border-radius: 3px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #a1a1aa;
-  }
+  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
 }
