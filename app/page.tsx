@@ -29,14 +29,14 @@ type BuilderMode = "resume" | "cover-letter" | "interview";
 type CoverView = "edit" | "preview";
 type TabId = "personal" | "experience" | "projects" | "education" | "skills" | "preview";
 
-const DESKTOP_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: "personal", label: "Personal", icon: <User className="h-4 w-4" /> },
-  { id: "experience", label: "Experience", icon: <Briefcase className="h-4 w-4" /> },
-  { id: "projects", label: "Projects", icon: <FolderKanban className="h-4 w-4" /> },
-  { id: "education", label: "Education", icon: <GraduationCap className="h-4 w-4" /> },
-  { id: "skills", label: "Skills", icon: <Wrench className="h-4 w-4" /> },
+const DESKTOP_TABS: { id: TabId; label: string }[] = [
+  { id: "personal", label: "Personal" },
+  { id: "experience", label: "Experience" },
+  { id: "projects", label: "Projects" },
+  { id: "education", label: "Education" },
+  { id: "skills", label: "Skills" },
 ];
-const MOBILE_TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+const MOBILE_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
   ...DESKTOP_TABS,
   { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
 ];
@@ -151,7 +151,8 @@ function ResumeBuilderInner() {
             <button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isCov ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Mail className="h-3.5 w-3.5" /> Cover Letter</button>
             <button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isInt ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><MessageSquare className="h-3.5 w-3.5" /> Interview Prep</button>
           </nav>
-          {isRes && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">{tabs.map(t => (<button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium border-b-2 whitespace-nowrap ${activeTab === t.id ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>{t.icon}<span className="hidden xs:inline">{t.label}</span></button>))}</nav>)}
+          {/* RESUME SECTION TABS — no icons, just labels */}
+          {isRes && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">{tabs.map(t => (<button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium border-b-2 whitespace-nowrap ${activeTab === t.id ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>{"icon" in t && t.icon ? <>{t.icon} </> : null}<span>{t.label}</span></button>))}</nav>)}
           {(isCov || isInt) && isMobile && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50"><button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 ${isEdit ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" />Edit</button><button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 ${!isEdit ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Eye className="h-3.5 w-3.5" />Preview</button></nav>)}
 
           <div className="flex-1 overflow-y-auto p-3 md:p-5">
@@ -170,15 +171,15 @@ function ResumeBuilderInner() {
             <div className="flex items-center gap-3 self-start print:hidden rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Font:</span>
-                <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="text-[10px] border-0 bg-transparent text-black focus:ring-0 cursor-pointer outline-none">
-                  {FONTS.map(f => <option key={f.value} value={f.value} className="text-black">{f.label}</option>)}
+                <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-white focus:ring-0 cursor-pointer outline-none">
+                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               </div>
               <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-600" />
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Color:</span>
-                <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="text-[10px] border-0 bg-transparent text-black focus:ring-0 cursor-pointer outline-none">
-                  {COLORS.map(c => <option key={c.value} value={c.value} className="text-black">{c.label}</option>)}
+                <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-white focus:ring-0 cursor-pointer outline-none">
+                  {COLORS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
             </div>
