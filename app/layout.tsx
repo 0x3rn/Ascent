@@ -26,9 +26,9 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Ascent — AI-Powered Resume Builder",
+  title: "Ascent | AI-Powered Career Toolkit",
   description:
-    "Build ATS-friendly, professional resumes with AI-powered bullet enhancement, grammar fixing, and job tailoring. Powered by DeepSeek.",
+    "Build ATS-friendly, professional resumes with AI-powered bullet enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides. Powered by DeepSeek.",
 };
 
 export default function RootLayout({
