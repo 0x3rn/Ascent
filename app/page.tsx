@@ -166,19 +166,19 @@ function ResumeBuilderInner() {
         </aside>
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-6 shrink-0">
           <div className="flex flex-col items-center gap-4">
-            {/* ---- THEME TOOLBAR (outside A4 container, uses app theme) ---- */}
+            {/* ---- THEME TOOLBAR ---- */}
             <div className="flex items-center gap-3 self-start print:hidden rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Font:</span>
-                <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-zinc-100 focus:ring-0 cursor-pointer outline-none">
-                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="text-[10px] border-0 bg-transparent text-black focus:ring-0 cursor-pointer outline-none">
+                  {FONTS.map(f => <option key={f.value} value={f.value} className="text-black">{f.label}</option>)}
                 </select>
               </div>
               <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-600" />
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Color:</span>
-                <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-zinc-100 focus:ring-0 cursor-pointer outline-none">
-                  {COLORS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="text-[10px] border-0 bg-transparent text-black focus:ring-0 cursor-pointer outline-none">
+                  {COLORS.map(c => <option key={c.value} value={c.value} className="text-black">{c.label}</option>)}
                 </select>
               </div>
             </div>
