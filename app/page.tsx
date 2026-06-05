@@ -67,6 +67,8 @@ function ResumeBuilderInner() {
   const [coverBody, setCoverBody] = useState("");
   const [coverTargetRole, setCoverTargetRole] = useState("");
   const [coverCompanyName, setCoverCompanyName] = useState("");
+  const [coverUserName, setCoverUserName] = useState("");
+  const [coverSkills, setCoverSkills] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [shortening, setShortening] = useState(false);
   const [coverPreviewScale, setCoverPreviewScale] = useState(1);
@@ -83,7 +85,6 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ---- Unified print hook ----
   const handlePrint = useReactToPrint({
     contentRef: printContentRef,
     documentTitle: builderMode === "cover-letter" ? "cover-letter" : "resume",
@@ -109,6 +110,8 @@ function ResumeBuilderInner() {
     setCoverBody("");
     setCoverTargetRole("");
     setCoverCompanyName("");
+    setCoverUserName("");
+    setCoverSkills([]);
   };
 
   const handleShorten = async () => {
@@ -124,11 +127,18 @@ function ResumeBuilderInner() {
     }
   };
 
-  const handleCoverGenerate = (body: string, targetRole: string, companyName: string) => {
+  const handleCoverGenerate = (
+    body: string,
+    targetRole: string,
+    companyName: string,
+    userName: string,
+    skills: string[]
+  ) => {
     setCoverBody(body);
     setCoverTargetRole(targetRole);
     setCoverCompanyName(companyName);
-    // Auto-switch to preview on mobile after generation
+    setCoverUserName(userName);
+    setCoverSkills(skills);
     if (isMobile) setCoverView("preview");
   };
 
@@ -171,20 +181,24 @@ function ResumeBuilderInner() {
 
   if (!hasMounted) return null;
 
+  const coverPreviewEl = (
+    <CoverLetterPreview
+      body={coverBody}
+      targetRole={coverTargetRole}
+      companyName={coverCompanyName}
+      userName={coverUserName}
+    />
+  );
+
   return (
     <>
-      {/* Single hidden print container — only the active mode renders inside */}
       <div
         ref={printContentRef}
         className="resume-print-container"
         style={{ visibility: "hidden", height: 0, overflow: "hidden" }}
         aria-hidden="true"
       >
-        {isResume ? (
-          <ResumePreview />
-        ) : (
-          <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} />
-        )}
+        {isResume ? <ResumePreview /> : coverPreviewEl}
       </div>
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
@@ -265,11 +279,29 @@ function ResumeBuilderInner() {
             ) : isCoverViewEdit || !isMobile ? (
               <CoverLetterBuilder onGenerate={handleCoverGenerate} />
             ) : (
-              <div className="flex justify-center pt-2">
-                <div className="w-full shadow-lg bg-white">
-                  <div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}>
-                    <div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>
-                      <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} />
+              <div className="space-y-3">
+                {/* MOBILE ACTION TOOLBAR */}
+                <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+                  <Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">
+                    {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                    {copied ? "Copied!" : "Copy"}
+                  </Button>
+                  <Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">
+                    {shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}
+                    {shortening ? "..." : "Shorten"}
+                  </Button>
+                  <Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300">
+                    <Trash2 className="h-3 w-3" />
+                    Delete
+                  </Button>
+                </div>
+                {/* Scaled preview */}
+                <div className="flex justify-center">
+                  <div className="w-full shadow-lg bg-white">
+                    <div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}>
+                      <div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>
+                        {coverPreviewEl}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -286,7 +318,7 @@ function ResumeBuilderInner() {
           </footer>
         </aside>
 
-        {/* RIGHT PANE */}
+        {/* RIGHT PANE (desktop) */}
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-6 shrink-0">
           <div className="flex flex-col items-center gap-4">
             {isResume ? (
@@ -295,7 +327,7 @@ function ResumeBuilderInner() {
               </div>
             ) : (
               <>
-                {/* Cover Letter Action Buttons */}
+                {/* DESKTOP ACTION TOOLBAR */}
                 <div className="flex items-center gap-2 self-start print:hidden flex-wrap">
                   <Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-7">
                     {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
@@ -311,7 +343,7 @@ function ResumeBuilderInner() {
                   </Button>
                 </div>
                 <div className="origin-top shadow-2xl">
-                  <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} />
+                  {coverPreviewEl}
                 </div>
               </>
             )}

@@ -32,7 +32,6 @@ async function runDeepSeek(prompt: string, maxTokens: number = 2048): Promise<st
     max_tokens: maxTokens,
   });
   const text = response.choices[0]?.message?.content?.trim() ?? "";
-  // Post-process: replace any remaining em-dashes
   return text.replace(/—/g, "-").replace(/\u2014/g, "-");
 }
 
@@ -63,14 +62,14 @@ I want to tailor them to this job description:
 ${jobDescription}
 """
 
-Your task: Rewrite each bullet point to naturally incorporate relevant keywords and phrases from the job description. Keep the original structure and order. Use strong action verbs and metrics where possible. Do NOT fabricate entirely new experiences — only tweak wording and emphasis to better align with the target role.
+Your task: Rewrite each bullet point to naturally incorporate relevant keywords and phrases from the job description. Keep the original structure and order. Use strong action verbs and metrics where possible. Do NOT fabricate entirely new experiences.
 
 Return ONLY the rewritten bullet points, maintaining the same bullet format (one per line with the same bullet character). Do NOT add or remove bullets. Return EXACTLY the same number of bullets as the input.`;
   return runDeepSeek(prompt);
 }
 
 export async function fixGrammar(bulletText: string): Promise<string> {
-  const prompt = `Fix any grammar, spelling, or punctuation issues in the following text. Improve sentence flow and clarity. Maintain the original tone and structure. Do not rewrite from scratch — only polish.
+  const prompt = `Fix any grammar, spelling, or punctuation issues in the following text. Improve sentence flow and clarity. Maintain the original tone and structure. Do not rewrite from scratch.
 
 Input: "${bulletText}"
 
@@ -79,7 +78,7 @@ Return ONLY the corrected text.`;
 }
 
 export async function enhanceSummary(summary: string): Promise<string> {
-  const prompt = `Rewrite the following professional summary to be more compelling, concise, and impactful. Use strong language that conveys leadership, results-orientation, and domain expertise. Keep it under 5 sentences.
+  const prompt = `Rewrite the following professional summary to be more compelling, concise, and impactful. Keep it under 5 sentences.
 
 Input: "${summary}"
 
@@ -88,24 +87,29 @@ Return ONLY the rewritten summary. No preamble, no closing remarks.`;
 }
 
 export async function generateCoverLetter(
+  userName: string,
   targetRole: string,
   companyName: string,
+  skills: string[],
   candidateBackground: string
 ): Promise<string> {
-  const hasBackground: boolean = !!(candidateBackground && candidateBackground.trim().length > 0);
+  const hasBackground = candidateBackground && candidateBackground.trim().length > 0;
+  const skillsLine = skills && skills.length > 0
+    ? `\nThe candidate has listed these relevant skills: ${skills.join(", ")}. Weave these skills seamlessly into the body paragraphs to demonstrate qualification. Make it sound natural and human.`
+    : "";
 
-  const prompt = `You are an expert executive career coach. Write a highly persuasive, 3-4 paragraph cover letter for a ${targetRole} position at ${companyName}.
+  const prompt = `You are an expert executive career coach. Write a highly persuasive, 3-4 paragraph cover letter from ${userName} applying for a ${targetRole} position at ${companyName}.
 
 Use strong industry buzzwords and impactful action verbs, but the overall tone MUST sound entirely human, authentic, and passionate.
 
 Do NOT use generic AI cliches like "delve", "testament", "tapestry", or "thrilled to apply".
 
-CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
+CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.${skillsLine}
 
 ${
   hasBackground
-    ? `Reference the candidate's provided background naturally. Here is the candidate's resume information:\n\n"""\n${candidateBackground}\n"""\n`
-    : `Since no resume background is provided, write a highly professional, generalized cover letter based solely on the target role and company. Focus on the value the candidate would bring to ${companyName} as a ${targetRole}.`
+    ? `\nReference the candidate's provided background naturally. Here is the candidate's resume information:\n\n"""\n${candidateBackground}\n"""\n`
+    : `\nSince no resume background is provided, write a highly professional, generalized cover letter based solely on the target role and company. Focus on the value the candidate would bring to ${companyName} as a ${targetRole}.`
 }
 
 Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off — just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
