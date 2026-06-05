@@ -1,15 +1,42 @@
-# Ascent — AI-Powered Resume Builder
+# Ascent — AI-Powered Career Toolkit
 
-A premium, production-ready resume builder that combines a live A4 preview with AI-powered writing assistance. Built with Next.js, Tailwind CSS, and DeepSeek AI.
+A premium, production-ready career toolkit that combines live A4 previews with AI-powered writing assistance across resumes, cover letters, and interview preparation. Built with Next.js 16 (App Router), Tailwind CSS v4, and DeepSeek AI.
 
 ## Features
 
-- **Live A4 Preview** — See exactly how your resume looks on paper as you type
-- **AI-Powered Writing** — Enhance bullet points, fix grammar, and tailor to job descriptions
-- **Secure by Design** — All AI calls use Next.js Server Actions; API key never exposed to the client
-- **PDF Export** — One-click A4 PDF download with proper print-optimized CSS
-- **ATS-Friendly** — Classic serif typography optimized for applicant tracking systems
+### Resume Builder
+- **Live A4 Preview** — Real-time split-screen workspace: edit on the left, see your resume update on the right
+- **AI-Powered Writing** — Enhance bullet points, fix grammar, and tailor experience to specific job descriptions
+- **Smart Paste (Magic Import)** — Paste raw LinkedIn text or old resumes; AI extracts and populates all form fields
+- **ATS Matcher** — Paste a job description and get an ATS compatibility score, missing keywords, and actionable tips
+- **Projects Section** — Dedicated section for GitHub projects with name, link, skills, and bullet points
+- **PDF Export** — One-click A4 PDF download with print-optimized CSS and multi-page support
 - **Markdown Support** — Summary and bullet points support Markdown formatting
+
+### Cover Letter Builder
+- **AI-Generated Letters** — Enter target role and company; AI crafts a tailored 3-4 paragraph cover letter
+- **Sandbox Toggle** — Option to include your resume data as context, or generate a generalized letter
+- **Skills Input** — Add up to 5 custom skills as pill badges for the AI to weave into the letter
+- **Action Toolbar** — Copy Text, Shorten, Regenerate, Delete, and Download PDF
+- **Business Letter Format** — Date, recipient, salutation, body paragraphs, and sign-off in standard format
+
+### Interview Prep Generator
+- **Custom Questions** — Generate 5 tailored behavioral/technical interview questions with STAR answer outlines
+- **Resume-Contextual** — Questions draw from your actual experience, skills, and projects
+- **Markdown Preview** — Formatted Q&A guide in the A4 preview workspace
+- **Export Ready** — Copy to clipboard or download as PDF
+
+### Theme & Customization
+- **Font Switcher** — Inter (Modern), Lora (Classic), Geist Mono (Tech) — affects all document previews
+- **Accent Colors** — Slate, Navy, Forest — applied to name headings and section borders
+- **Dark/Light Mode** — "Midnight & Frost" premium palette with Indigo accent and butter-smooth transitions
+- **Zero FOUC** — next-themes with `suppressHydrationWarning` and `disableTransitionOnChange` prevents any flash
+
+### Print & PDF
+- **A4 Export** — All documents export as perfect A4 pages with 210mm width
+- **Safari Fixes** — Table print hack ensures consistent margins on every page, even when content flows to page 2+
+- **Mobile Parity** — Print output is identical whether on desktop or mobile (strict 210mm width enforced)
+- **Cross-Bleeding Prevention** — Only the active document prints; builder UI is hidden via `print:hidden`
 
 ## Tech Stack
 
@@ -22,6 +49,8 @@ A premium, production-ready resume builder that combines a live A4 preview with 
 | AI | DeepSeek (via OpenAI-compatible SDK) |
 | Markdown | marked |
 | PDF | react-to-print |
+| Theme | next-themes |
+| Fonts | Inter, Lora, Geist, Geist Mono (next/font/google) |
 
 ## Getting Started
 
@@ -68,32 +97,67 @@ npm start
 
 ## AI Features
 
-Three distinct AI actions available on every experience bullet section:
+### Resume Actions
 
 | Action | Description |
 |--------|-------------|
+| **Enhance Bullet** | Rewrites bullets with strong action verbs and metric-driven phrasing |
 | **Fix Grammar** | Corrects spelling, grammar, and punctuation; improves sentence flow |
-| **Enhance** | Rewrites bullets with strong action verbs and metric-driven phrasing |
 | **Tailor to Job** | Rewords bullets to match keywords from a target job description |
+| **Enhance Summary** | Rewrites the professional summary to be more compelling and concise |
+| **Magic Import** | Parses raw LinkedIn/resume text into structured form data via AI |
 
-There's also an **Enhance Summary** action for the professional summary field.
+### Cover Letter Actions
+
+| Action | Description |
+|--------|-------------|
+| **Generate** | Creates a 3-4 paragraph cover letter tailored to role and company |
+| **Regenerate** | Generates a fresh cover letter using the same form inputs |
+| **Shorten** | Condenses the cover letter to 2 highly impactful paragraphs |
+
+### Interview Prep Actions
+
+| Action | Description |
+|--------|-------------|
+| **Generate Prep Guide** | Creates 5 STAR-method behavioral/technical interview questions |
+
+### Analysis
+
+| Action | Description |
+|--------|-------------|
+| **ATS Match** | Scores resume against job description (0-100), lists missing keywords, provides actionable tip |
 
 ## Project Structure
 
 ```
 ├── app/
-│   ├── actions/resume-ai.ts        # Secure DeepSeek server actions
-│   ├── globals.css                 # Tailwind, print styles, typography
-│   ├── layout.tsx                  # Root layout
+│   ├── actions/resume-ai.ts        # 8 DeepSeek server actions
+│   ├── globals.css                 # Tailwind, HSL theme, print styles, transitions
+│   ├── layout.tsx                  # Root layout + ThemeProvider
 │   └── page.tsx                    # Split-screen workspace
 ├── components/
-│   ├── builder/                    # Form sections (Personal, Experience, Education, Skills)
-│   ├── preview/                    # A4 preview + PDF export
+│   ├── builder/                    # Form sections
+│   │   ├── personal-info-section.tsx
+│   │   ├── experience-section.tsx
+│   │   ├── projects-section.tsx
+│   │   ├── education-section.tsx
+│   │   ├── skills-section.tsx
+│   │   ├── cover-letter-builder.tsx
+│   │   └── ai-magic-button.tsx
+│   ├── preview/                    # A4 document previews
+│   │   ├── resume-preview.tsx
+│   │   ├── cover-letter-preview.tsx
+│   │   ├── interview-preview.tsx
+│   │   └── pdf-export-button.tsx
 │   └── ui/                         # shadcn/ui components
+│       ├── button.tsx
+│       ├── input.tsx
+│       ├── textarea.tsx
+│       └── skeleton.tsx
 ├── lib/
-│   ├── resume-context.tsx          # Global state management
-│   ├── resume-types.ts             # TypeScript schema + defaults
-│   └── utils.ts                    # Utility functions
+│   ├── resume-context.tsx          # Global state management (useReducer)
+│   ├── resume-types.ts             # TypeScript schema + default sample data
+│   └── utils.ts                    # cn() utility
 └── public/                         # Static assets
 ```
 
