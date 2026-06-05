@@ -15,29 +15,33 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
   const { data } = useResume();
   const [targetRole, setTargetRole] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [useResumeData, setUseResumeData] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
     if (!targetRole.trim() || !companyName.trim()) return;
     setLoading(true);
     try {
-      // Build candidate background from resume data
-      const bg: string[] = [];
-      if (data.personalInfo.summary) bg.push(`Summary: ${data.personalInfo.summary}`);
-      data.experience.forEach((exp) => {
-        bg.push(`Experience at ${exp.company} as ${exp.role}: ${exp.bullets.replace(/\n/g, " | ")}`);
-      });
-      data.education.forEach((edu) => {
-        bg.push(`Education: ${edu.degree} in ${edu.field} from ${edu.school}`);
-      });
-      data.skills.forEach((sk) => {
-        bg.push(`Skills - ${sk.category}: ${sk.skills}`);
-      });
-      data.projects.forEach((proj) => {
-        bg.push(`Project: ${proj.name} - ${proj.bullets.replace(/\n/g, " | ")}`);
-      });
+      let bg = "";
+      if (useResumeData) {
+        const parts: string[] = [];
+        if (data.personalInfo.summary) parts.push(`Summary: ${data.personalInfo.summary}`);
+        data.experience.forEach((exp) => {
+          parts.push(`Experience at ${exp.company} as ${exp.role}: ${exp.bullets.replace(/\n/g, " | ")}`);
+        });
+        data.education.forEach((edu) => {
+          parts.push(`Education: ${edu.degree} in ${edu.field} from ${edu.school}`);
+        });
+        data.skills.forEach((sk) => {
+          parts.push(`Skills - ${sk.category}: ${sk.skills}`);
+        });
+        data.projects.forEach((proj) => {
+          parts.push(`Project: ${proj.name} - ${proj.bullets.replace(/\n/g, " | ")}`);
+        });
+        bg = parts.join("\n");
+      }
 
-      const body = await generateCoverLetter(targetRole, companyName, bg.join("\n"));
+      const body = await generateCoverLetter(targetRole, companyName, bg);
       onGenerate(body, targetRole, companyName);
     } catch (err) {
       console.error("Cover letter generation failed:", err);
@@ -69,6 +73,18 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
             placeholder="Stripe"
           />
         </div>
+
+        {/* Sandbox Toggle */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={useResumeData}
+            onChange={(e) => setUseResumeData(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-xs text-zinc-600">Tailor using my Resume data</span>
+        </label>
+
         <Button
           onClick={handleGenerate}
           disabled={loading || !targetRole.trim() || !companyName.trim()}

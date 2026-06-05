@@ -2,7 +2,6 @@
 
 import OpenAI from "openai";
 
-// Initialize DeepSeek client (OpenAI-compatible)
 function getClient() {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -18,9 +17,10 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - NEVER include any conversational preamble, greeting, or closing.
 - NEVER say things like "Sure!", "Here you go:", "I've enhanced...", or anything similar.
 - NEVER wrap your response in quotes or markdown code fences.
+- CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
 - Return ONLY the raw text content that belongs in the resume field.`;
 
-async function runDeepSeek(prompt: string, maxTokens = 2048): Promise<string> {
+async function runDeepSeek(prompt: string, maxTokens: number = 2048): Promise<string> {
   const openai = getClient();
   const response = await openai.chat.completions.create({
     model: "deepseek-chat",
@@ -31,7 +31,9 @@ async function runDeepSeek(prompt: string, maxTokens = 2048): Promise<string> {
     temperature: 0.4,
     max_tokens: maxTokens,
   });
-  return response.choices[0]?.message?.content?.trim() ?? "";
+  const text = response.choices[0]?.message?.content?.trim() ?? "";
+  // Post-process: replace any remaining em-dashes
+  return text.replace(/—/g, "-").replace(/\u2014/g, "-");
 }
 
 export async function enhanceBulletPoint(bulletText: string): Promise<string> {
@@ -90,19 +92,37 @@ export async function generateCoverLetter(
   companyName: string,
   candidateBackground: string
 ): Promise<string> {
+  const hasBackground: boolean = !!(candidateBackground && candidateBackground.trim().length > 0);
+
   const prompt = `You are an expert executive career coach. Write a highly persuasive, 3-4 paragraph cover letter for a ${targetRole} position at ${companyName}.
 
 Use strong industry buzzwords and impactful action verbs, but the overall tone MUST sound entirely human, authentic, and passionate.
 
 Do NOT use generic AI cliches like "delve", "testament", "tapestry", or "thrilled to apply".
 
-Reference the candidate's provided background naturally. Here is the candidate's resume information:
+CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
 
-"""
-${candidateBackground}
-"""
+${
+  hasBackground
+    ? `Reference the candidate's provided background naturally. Here is the candidate's resume information:\n\n"""\n${candidateBackground}\n"""\n`
+    : `Since no resume background is provided, write a highly professional, generalized cover letter based solely on the target role and company. Focus on the value the candidate would bring to ${companyName} as a ${targetRole}.`
+}
 
 Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off — just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
 
   return runDeepSeek(prompt, 1024);
+}
+
+export async function shortenCoverLetter(currentText: string): Promise<string> {
+  const prompt = `You are an expert editor. Shorten this cover letter to a maximum of 2 highly impactful paragraphs (approx. 15 lines of text). Retain the exact same tone, structure, and key achievements. Do NOT add new information. Return ONLY the shortened letter.
+
+Cover letter:
+"""
+${currentText}
+"""
+
+Return ONLY the shortened cover letter body text. Each paragraph separated by a blank line. No conversational filler.`;
+
+  const maxTokens: number = currentText.length > 200 ? 512 : 256;
+  return runDeepSeek(prompt, maxTokens);
 }

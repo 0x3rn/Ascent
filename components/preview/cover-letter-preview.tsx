@@ -20,7 +20,7 @@ export function CoverLetterPreview({ body, targetRole, companyName }: CoverLette
   });
 
   return (
-    <div className="w-[210mm] min-h-[297mm] bg-white text-zinc-900 font-[Inter] shadow-2xl print:shadow-none print:w-auto print:h-auto print:min-h-0 print:m-0">
+    <div className="w-[210mm] min-h-[297mm] bg-white text-zinc-900 font-[Inter] shadow-2xl print:shadow-none print:w-auto print:h-auto print:min-h-0 print:m-0 print:pt-[15mm]">
       <div className="px-[22mm] py-[20mm] print:px-[22mm] print:py-[20mm]">
         {/* Date */}
         <div className="mb-5">
@@ -43,21 +43,21 @@ export function CoverLetterPreview({ body, targetRole, companyName }: CoverLette
           Dear Hiring Manager,
         </p>
 
-        {/* Body */}
+        {/* Body — removed break-inside-avoid to allow natural page flow */}
         {body ? (
-          <div className="text-[12pt] leading-[1.5] text-zinc-700 space-y-3 mb-5 print:break-inside-avoid">
+          <div className="text-[12pt] leading-[1.5] text-zinc-700 space-y-3 mb-0">
             {body.split("\n\n").map((paragraph, i) => (
               <p key={i}>{paragraph.trim()}</p>
             ))}
           </div>
         ) : (
-          <div className="text-[12pt] leading-[1.5] text-zinc-400 space-y-3 mb-5 italic">
+          <div className="text-[12pt] leading-[1.5] text-zinc-400 space-y-3 mb-0 italic">
             <p>Enter a target role and company name, then click "Generate Cover Letter" to create a tailored, AI-powered cover letter based on your resume.</p>
           </div>
         )}
 
         {/* Sign-off */}
-        <div className="print:break-inside-avoid">
+        <div className="mt-8">
           <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-4">
             Sincerely,
           </p>
