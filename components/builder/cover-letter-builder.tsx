@@ -13,7 +13,8 @@ interface CoverLetterBuilderProps {
     targetRole: string,
     companyName: string,
     userName: string,
-    skills: string[]
+    skills: string[],
+    useResumeData: boolean
   ) => void;
 }
 
@@ -63,7 +64,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
       }
 
       const body = await generateCoverLetter(userName, targetRole, companyName, skills, bg);
-      onGenerate(body, targetRole, companyName, userName, skills);
+      onGenerate(body, targetRole, companyName, userName, skills, useResumeData);
     } catch (err) {
       console.error("Cover letter generation failed:", err);
     } finally {
