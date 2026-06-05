@@ -53,22 +53,16 @@ const A4_WIDTH_PX = 794;
 const A4_HEIGHT_PX = 1123;
 
 function ResumeBuilderInner() {
-  // ---- Top-level mode ----
   const [builderMode, setBuilderMode] = useState<BuilderMode>("resume");
-
-  // ---- Resume state ----
   const [activeTab, setActiveTab] = useState<TabId>("personal");
   const [isMobile, setIsMobile] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
-
-  // ---- Cover letter state ----
   const [coverBody, setCoverBody] = useState("");
   const [coverTargetRole, setCoverTargetRole] = useState("");
   const [coverCompanyName, setCoverCompanyName] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // ---- Print refs ----
   const resumePrintContentRef = useRef<HTMLDivElement>(null);
   const coverPrintContentRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -81,7 +75,6 @@ function ResumeBuilderInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // ---- Resume print hook ----
   const handleResumePrint = useReactToPrint({
     contentRef: resumePrintContentRef,
     documentTitle: "resume",
@@ -94,7 +87,6 @@ function ResumeBuilderInner() {
     `,
   });
 
-  // ---- Cover letter print hook ----
   const handleCoverPrint = useReactToPrint({
     contentRef: coverPrintContentRef,
     documentTitle: "cover-letter",
@@ -121,9 +113,7 @@ function ResumeBuilderInner() {
       await navigator.clipboard.writeText(coverBody);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-    }
+    } catch {}
   };
 
   const handleCoverGenerate = (body: string, targetRole: string, companyName: string) => {
@@ -132,9 +122,9 @@ function ResumeBuilderInner() {
     setCoverCompanyName(companyName);
   };
 
-  // ---- Resume tab logic ----
   const tabs = isMobile ? MOBILE_TABS : DESKTOP_TABS;
   const isPreviewTab = activeTab === "preview";
+  const isResume = builderMode === "resume";
 
   const updatePreviewScale = useCallback(() => {
     if (previewWrapperRef.current) {
@@ -154,35 +144,18 @@ function ResumeBuilderInner() {
 
   if (!hasMounted) return null;
 
-  // =================================================
-  // RENDER
-  // =================================================
-  const isResume = builderMode === "resume";
-
   return (
     <>
-      {/* ---- Hidden print containers ---- */}
-      <div
-        ref={resumePrintContentRef}
-        className="resume-print-container"
-        style={{ visibility: "hidden", height: 0, overflow: "hidden" }}
-        aria-hidden="true"
-      >
+      <div ref={resumePrintContentRef} className="resume-print-container" style={{ visibility: "hidden", height: 0, overflow: "hidden" }} aria-hidden="true">
         <ResumePreview />
       </div>
-      <div
-        ref={coverPrintContentRef}
-        className="resume-print-container"
-        style={{ visibility: "hidden", height: 0, overflow: "hidden" }}
-        aria-hidden="true"
-      >
+      <div ref={coverPrintContentRef} className="resume-print-container" style={{ visibility: "hidden", height: 0, overflow: "hidden" }} aria-hidden="true">
         <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} />
       </div>
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
-        {/* ---- Left Pane ---- */}
         <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
-          {/* Header */}
+          {/* HEADER */}
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
               <div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
@@ -200,33 +173,29 @@ function ResumeBuilderInner() {
             </Button>
           </header>
 
-          {/* ---- Mode Switcher ---- */}
+          {/* MODE SWITCHER */}
           <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50">
-            <button
-              onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${
-                isResume
-                  ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30"
-                  : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"
-              }`}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Resume
+            <button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${isResume ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>
+              <FileText className="h-3.5 w-3.5" /> Resume
             </button>
-            <button
-              onClick={() => setBuilderMode("cover-letter")}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${
-                !isResume
-                  ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30"
-                  : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"
-              }`}
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Cover Letter
+            <button onClick={() => setBuilderMode("cover-letter")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${!isResume ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>
+              <Mail className="h-3.5 w-3.5" /> Cover Letter
             </button>
           </nav>
 
-          {/* Content */}
+          {/* RESUME SECTION TABS (only in resume mode) */}
+          {isResume && (
+            <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">
+              {tabs.map((tab) => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>
+                  {tab.icon}
+                  <span className="hidden xs:inline">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+          )}
+
+          {/* CONTENT AREA */}
           <div className="flex-1 overflow-y-auto p-3 md:p-5">
             {isResume ? (
               <>
@@ -252,7 +221,7 @@ function ResumeBuilderInner() {
             )}
           </div>
 
-          {/* Footer */}
+          {/* FOOTER */}
           <footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3">
             <p className="text-[10px] md:text-[11px] text-zinc-400">Powered by DeepSeek AI</p>
             <a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
@@ -261,7 +230,7 @@ function ResumeBuilderInner() {
           </footer>
         </aside>
 
-        {/* ---- Right Pane ---- */}
+        {/* RIGHT PANE */}
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-6 shrink-0">
           <div className="flex flex-col items-center gap-4">
             {isResume ? (
