@@ -20,7 +20,7 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - NEVER wrap your response in quotes or markdown code fences.
 - Return ONLY the raw text content that belongs in the resume field.`;
 
-async function runDeepSeek(prompt: string): Promise<string> {
+async function runDeepSeek(prompt: string, maxTokens = 2048): Promise<string> {
   const openai = getClient();
   const response = await openai.chat.completions.create({
     model: "deepseek-chat",
@@ -29,7 +29,7 @@ async function runDeepSeek(prompt: string): Promise<string> {
       { role: "user", content: prompt },
     ],
     temperature: 0.4,
-    max_tokens: 2048,
+    max_tokens: maxTokens,
   });
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
@@ -83,4 +83,26 @@ Input: "${summary}"
 
 Return ONLY the rewritten summary. No preamble, no closing remarks.`;
   return runDeepSeek(prompt);
+}
+
+export async function generateCoverLetter(
+  targetRole: string,
+  companyName: string,
+  candidateBackground: string
+): Promise<string> {
+  const prompt = `You are an expert executive career coach. Write a highly persuasive, 3-4 paragraph cover letter for a ${targetRole} position at ${companyName}.
+
+Use strong industry buzzwords and impactful action verbs, but the overall tone MUST sound entirely human, authentic, and passionate.
+
+Do NOT use generic AI cliches like "delve", "testament", "tapestry", or "thrilled to apply".
+
+Reference the candidate's provided background naturally. Here is the candidate's resume information:
+
+"""
+${candidateBackground}
+"""
+
+Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off — just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
+
+  return runDeepSeek(prompt, 1024);
 }
