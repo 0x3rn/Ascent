@@ -48,8 +48,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-        <Sparkles className="h-4 w-4 text-indigo-500" />
+      <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
         Cover Letter Generator
       </div>
 
