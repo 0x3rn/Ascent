@@ -29,7 +29,6 @@ type BuilderMode = "resume" | "cover-letter" | "interview";
 type CoverView = "edit" | "preview";
 type TabId = "personal" | "experience" | "projects" | "education" | "skills" | "preview" | "ats";
 
-// Desktop tabs — includes ATS Matcher
 const DESKTOP_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
   { id: "personal", label: "Personal" },
   { id: "experience", label: "Experience" },
@@ -39,7 +38,6 @@ const DESKTOP_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
   { id: "ats", label: "ATS Matcher", icon: <Target className="h-4 w-4" /> },
 ];
 
-// Mobile tabs — Preview only (ATS lives inside Preview view)
 const MOBILE_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
   { id: "personal", label: "Personal" },
   { id: "experience", label: "Experience" },
@@ -153,8 +151,8 @@ function ResumeBuilderInner() {
   const intEl = <InterviewPreview content={intContent} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const ap = isRes ? resumeEl : isCov ? coverEl : intEl;
 
-  const leftPaneContent = (() => {
-    // ATS Matcher tab (desktop)
+  // ---- Left pane content (flat function, no IIFE) ----
+  function renderLeftPane() {
     if (isRes && isAts) {
       return (
         <div className="space-y-4">
@@ -162,13 +160,18 @@ function ResumeBuilderInner() {
           <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
             <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
             <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
-            {atsResult && (<div className="space-y-2 pt-1"><div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>{atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}{atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}</div>)}
+            {atsResult && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>
+                {atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}
+                {atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}
+              </div>
+            )}
           </div>
         </div>
       );
     }
 
-    // Resume form tabs
     if (isRes && !isAts) {
       return (
         <>
@@ -201,20 +204,45 @@ function ResumeBuilderInner() {
 
     if (isCov && !isEdit && isMobile) {
       return (
-        <div className="space-y-3"><div className="flex items-center gap-1.5 flex-wrap print:hidden"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}Re-gen</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button></div><div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+            <Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy"}</Button>
+            <Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "..." : "Shorten"}</Button>
+            <Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}Re-gen</Button>
+            <Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button>
+          </div>
+          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
+        </div>
       );
     }
 
     if (isInt && (isEdit || !isMobile)) {
-      return (<div className="space-y-4"><div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Interview Prep Generator</div><div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3"><div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div><div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div><Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button></div></div>);
+      return (
+        <div className="space-y-4">
+          <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Interview Prep Generator</div>
+          <div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3">
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div>
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div>
+            <Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button>
+          </div>
+        </div>
+      );
     }
 
     if (isInt && !isEdit && isMobile) {
-      return (<div className="space-y-3"><div className="flex items-center gap-1.5 flex-wrap print:hidden"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button></div><div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>);
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+            <Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button>
+            <Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button>
+          </div>
+          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
+        </div>
+      );
     }
 
     return null;
-  })();
+  }
 
   return (
     <>
@@ -226,7 +254,7 @@ function ResumeBuilderInner() {
           <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50"><button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isRes ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" />Resume</button><button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isCov ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Mail className="h-3.5 w-3.5" />Cover Letter</button><button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isInt ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><MessageSquare className="h-3.5 w-3.5" />Interview Prep</button></nav>
           {isRes && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">{tabs.map(t => (<button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium border-b-2 whitespace-nowrap ${activeTab === t.id ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>{"icon" in t && t.icon ? <>{t.icon} </> : null}<span>{t.label}</span></button>))}</nav>)}
           {(isCov || isInt) && isMobile && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50"><button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 ${isEdit ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" />Edit</button><button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 ${!isEdit ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Eye className="h-3.5 w-3.5" />Preview</button></nav>)}
-          <div className="flex-1 overflow-y-auto p-3 md:p-5">{leftPaneContent}</div>
+          <div className="flex-1 overflow-y-auto p-3 md:p-5">{renderLeftPane()}</div>
           <footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3"><p className="text-[10px] md:text-[11px] text-zinc-400 dark:text-zinc-500">Powered by DeepSeek AI</p><a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4" /></a></footer>
         </aside>
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-6 shrink-0"><div className="flex flex-col items-center gap-4"><div className="flex items-center gap-3 self-start print:hidden rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800"><div className="flex items-center gap-1.5"><span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Font:</span><select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-white focus:ring-0 cursor-pointer outline-none" style={{ colorScheme: "light" }}>{FONTS.map(f => <option key={f.value} value={f.value} style={{ color: "#000", backgroundColor: "#fff" }}>{f.label}</option>)}</select></div><div className="w-px h-4 bg-zinc-200 dark:bg-zinc-600" /><div className="flex items-center gap-1.5"><span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Color:</span><select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-white focus:ring-0 cursor-pointer outline-none" style={{ colorScheme: "light" }}>{COLORS.map(c => <option key={c.value} value={c.value} style={{ color: "#000", backgroundColor: "#fff" }}>{c.label}</option>)}</select></div></div>{isRes ? <div className="origin-top shadow-2xl">{resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button></div><div className="origin-top shadow-2xl">{coverEl}</div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button></div><div className="origin-top shadow-2xl">{intEl}</div></>)}</div></main>
