@@ -29,16 +29,17 @@ type BuilderMode = "resume" | "cover-letter" | "interview";
 type CoverView = "edit" | "preview";
 type TabId = "personal" | "experience" | "projects" | "education" | "skills" | "preview";
 
-const DESKTOP_TABS: { id: TabId | "ats"; label: string; icon?: React.ReactNode }[] = [
+// Desktop tabs — no ATS, clean split-screen of forms + preview
+const DESKTOP_TABS: { id: TabId; label: string }[] = [
   { id: "personal", label: "Personal" },
   { id: "experience", label: "Experience" },
   { id: "projects", label: "Projects" },
   { id: "education", label: "Education" },
   { id: "skills", label: "Skills" },
-  { id: "ats", label: "ATS Matcher", icon: <Target className="h-4 w-4" /> },
 ];
 
-const MOBILE_TABS: { id: TabId | "ats"; label: string; icon?: React.ReactNode }[] = [
+// Mobile tabs — includes Preview (with ATS inside preview)
+const MOBILE_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
   ...DESKTOP_TABS,
   { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
 ];
@@ -64,7 +65,7 @@ function ResumeBuilderInner() {
   const [themeFont, setThemeFont] = useState("inter");
   const [themeAccent, setThemeAccent] = useState("slate");
   const [builderMode, setBuilderMode] = useState<BuilderMode>("resume");
-  const [activeTab, setActiveTab] = useState<TabId | "ats">("personal");
+  const [activeTab, setActiveTab] = useState<TabId>("personal");
   const [coverView, setCoverView] = useState<CoverView>("edit");
   const [isMobile, setIsMobile] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -104,7 +105,15 @@ function ResumeBuilderInner() {
 
   useEffect(() => { setHasMounted(true); const check = () => setIsMobile(window.innerWidth < 768); check(); window.addEventListener("resize", check); return () => window.removeEventListener("resize", check); }, []);
 
-  const handlePrint = useReactToPrint({ contentRef: printContentRef, documentTitle: builderMode === "cover-letter" ? "cover-letter" : builderMode === "interview" ? "interview-prep" : "resume", pageStyle: `@page { size: A4; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print, .no-print * { display: none !important; } }` });
+  // Dynamic PDF filename: "[First Name] Resume"
+  const firstName = (data.personalInfo.fullName || "My").trim().split(/\s+/)[0] || "My";
+  const pdfTitle = `${firstName} Resume`;
+
+  const handlePrint = useReactToPrint({
+    contentRef: printContentRef,
+    documentTitle: pdfTitle,
+    pageStyle: `@page { size: A4; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print, .no-print * { display: none !important; } }`,
+  });
 
   const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {} };
   const handleDelete = () => { setCoverBody(""); setCoverTargetRole(""); setCoverCompanyName(""); setCoverUserName(""); setCoverSkills([]); };
@@ -126,7 +135,6 @@ function ResumeBuilderInner() {
   const isCov = builderMode === "cover-letter";
   const isInt = builderMode === "interview";
   const isPrev = activeTab === "preview";
-  const isAts = activeTab === "ats";
   const isEdit = coverView === "edit";
 
   useEffect(() => { if (isPrev && isMobile) { upScale(); const t = setTimeout(upScale, 100); window.addEventListener("resize", upScale); return () => { clearTimeout(t); window.removeEventListener("resize", upScale); }; } }, [isPrev, isMobile, upScale]);
@@ -142,31 +150,12 @@ function ResumeBuilderInner() {
 
   // ---- Left pane content logic (flattened, no nested ternaries) ----
   const leftPaneContent = (() => {
-    // ATS Matcher tab (desktop + mobile)
-    if (isRes && isAts) {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
-          <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
-            <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
-            <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
-            {atsResult && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>
-                {atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}
-                {atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // Resume form tabs
-    if (isRes && !isAts) {
+    // Resume form tabs (desktop + mobile edit view)
+    if (isRes) {
       return (
         <>
-          {(activeTab !== "preview" || !isMobile) && (
+          {/* Magic Import — only on edit/form view, never on mobile preview */}
+          {(!isPrev || !isMobile) && (
             <div className="mb-3"><Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="w-full gap-1.5 text-xs h-8"><Wand2 className="h-3.5 w-3.5 text-indigo-500" />Magic Import</Button></div>
           )}
           {activeTab === "personal" && <PersonalInfoSection />}
@@ -174,6 +163,7 @@ function ResumeBuilderInner() {
           {activeTab === "projects" && <ProjectsSection />}
           {activeTab === "education" && <EducationSection />}
           {activeTab === "skills" && <SkillsSection />}
+          {/* Mobile preview: scaled resume + ATS Matcher below it */}
           {isPrev && isMobile && (
             <>
               <div className="flex justify-center pt-2"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
@@ -250,7 +240,7 @@ function ResumeBuilderInner() {
               <h2 className="text-sm font-semibold flex items-center gap-2"><Wand2 className="h-4 w-4 text-indigo-500" /> Magic Import</h2>
               <button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button>
             </div>
-            <Textarea value={pasteRaw} onChange={(e) => setPasteRaw(e.target.value)} placeholder="Paste raw LinkedIn text, old resume, or bio..." className="flex-1 min-h-[30vh] max-h-[50vh] overflow-y-auto text-[16px] md:text-sm" />
+            <Textarea value={pasteRaw} onChange={(e) => setPasteRaw(e.target.value)} placeholder="Paste raw LinkedIn text, old resume, or bio..." className="flex-1 min-h-[30vh] max-h-[50vh] overflow-y-auto resize-none text-[16px] md:text-sm" />
             <Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-3 shrink-0" variant="magic" size="sm">
               {pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
               {pasteLoading ? "Parsing..." : "Populate Resume"}
@@ -270,10 +260,11 @@ function ResumeBuilderInner() {
             <button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isCov ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Mail className="h-3.5 w-3.5" /> Cover Letter</button>
             <button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isInt ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><MessageSquare className="h-3.5 w-3.5" /> Interview Prep</button>
           </nav>
+          {/* Resume section tabs — no ATS tab on desktop or mobile */}
           {isRes && (
             <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">
               {tabs.map(t => (
-                <button key={t.id} onClick={() => setActiveTab(t.id as any)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium border-b-2 whitespace-nowrap ${activeTab === t.id ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>
+                <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium border-b-2 whitespace-nowrap ${activeTab === t.id ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>
                   {"icon" in t && t.icon ? <>{t.icon} </> : null}<span>{t.label}</span>
                 </button>
               ))}

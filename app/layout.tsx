@@ -31,6 +31,14 @@ export const metadata: Metadata = {
     "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides. Powered by DeepSeek.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

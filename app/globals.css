@@ -6,8 +6,6 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --breakpoint-xs: 380px;
-
-  /* shadcn/ui color tokens */
   --color-border: hsl(240, 5.9%, 90%);
   --color-input: hsl(240, 5.9%, 90%);
   --color-ring: hsl(243, 75%, 59%);
@@ -27,15 +25,10 @@
   --color-card-foreground: hsl(240, 10%, 3.9%);
 }
 
-/* ---- Premium "Midnight & Frost" Palette ---- */
 :root {
-  --background: 0 0% 100%; /* Pure White */
-  --foreground: 240 10% 3.9%; /* Zinc 950 */
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 243 75% 59%; /* Indigo 600 */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --primary: 243 75% 59%;
   --primary-foreground: 0 0% 100%;
   --secondary: 240 4.8% 95.9%;
   --secondary-foreground: 240 5.9% 10%;
@@ -48,17 +41,12 @@
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 243 75% 59%;
-  --radius: 0.5rem;
 }
 
 .dark {
-  --background: 240 10% 3.9%; /* Zinc 950 - Deep Midnight */
-  --foreground: 0 0% 98%; /* Frost White */
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 243 75% 65%; /* Indigo 500 */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --primary: 243 75% 65%;
   --primary-foreground: 0 0% 100%;
   --secondary: 240 3.7% 15.9%;
   --secondary-foreground: 0 0% 98%;
@@ -73,34 +61,18 @@
   --ring: 243 75% 65%;
 }
 
-/* ---- Butter-Smooth Theme Transitions ---- */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ---- Hide scrollbar for tabs ---- */
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* ---- Print Styles — A4 resume export ---- */
 @media print {
   @page { margin: 0 !important; }
-  html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
-    background: white !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
+  html, body { margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .resume-print-container {
     display: block !important;
     visibility: visible !important;
@@ -108,7 +80,7 @@
     width: 210mm !important;
     min-width: 210mm !important;
     max-width: 210mm !important;
-    padding: 15mm 20mm !important;
+    padding: 0mm 20mm !important;
     box-sizing: border-box !important;
     min-height: 100% !important;
     height: auto !important;
@@ -117,13 +89,13 @@
     background: white !important;
     color: black !important;
   }
-  .resume-print-container * {
-    display: revert !important;
-    visibility: visible !important;
+  .resume-print-container table tbody tr td > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
+  .resume-print-container * { display: revert !important; visibility: visible !important; }
 }
 
-/* ---- Scrollbar styling ---- */
 @media (min-width: 768px) {
   .custom-scrollbar::-webkit-scrollbar { width: 5px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
