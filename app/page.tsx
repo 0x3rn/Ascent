@@ -29,7 +29,6 @@ type BuilderMode = "resume" | "cover-letter" | "interview";
 type CoverView = "edit" | "preview";
 type TabId = "personal" | "experience" | "projects" | "education" | "skills" | "preview";
 
-// Desktop: Resume tabs are form sections OR ATS Matcher
 const DESKTOP_TABS: { id: TabId | "ats"; label: string; icon?: React.ReactNode }[] = [
   { id: "personal", label: "Personal" },
   { id: "experience", label: "Experience" },
@@ -39,7 +38,6 @@ const DESKTOP_TABS: { id: TabId | "ats"; label: string; icon?: React.ReactNode }
   { id: "ats", label: "ATS Matcher", icon: <Target className="h-4 w-4" /> },
 ];
 
-// Mobile: same as desktop but includes Preview
 const MOBILE_TABS: { id: TabId | "ats"; label: string; icon?: React.ReactNode }[] = [
   ...DESKTOP_TABS,
   { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
@@ -142,11 +140,109 @@ function ResumeBuilderInner() {
   const intEl = <InterviewPreview content={intContent} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const ap = isRes ? resumeEl : isCov ? coverEl : intEl;
 
+  // ---- Left pane content logic (flattened, no nested ternaries) ----
+  const leftPaneContent = (() => {
+    // ATS Matcher tab (desktop + mobile)
+    if (isRes && isAts) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
+          <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
+            <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
+            <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
+            {atsResult && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>
+                {atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}
+                {atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Resume form tabs
+    if (isRes && !isAts) {
+      return (
+        <>
+          {(activeTab !== "preview" || !isMobile) && (
+            <div className="mb-3"><Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="w-full gap-1.5 text-xs h-8"><Wand2 className="h-3.5 w-3.5 text-indigo-500" />Magic Import</Button></div>
+          )}
+          {activeTab === "personal" && <PersonalInfoSection />}
+          {activeTab === "experience" && <ExperienceSection />}
+          {activeTab === "projects" && <ProjectsSection />}
+          {activeTab === "education" && <EducationSection />}
+          {activeTab === "skills" && <SkillsSection />}
+          {isPrev && isMobile && (
+            <>
+              <div className="flex justify-center pt-2"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
+              <div className="mt-4 p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
+                <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
+                <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
+                {atsResult && (<div className="space-y-2 pt-1"><div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>{atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}{atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}</div>)}
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
+    // Cover Letter: edit view or desktop
+    if (isCov && (isEdit || !isMobile)) {
+      return <CoverLetterBuilder onGenerate={handleCoverGenerate} />;
+    }
+
+    // Cover Letter: mobile preview view
+    if (isCov && !isEdit && isMobile) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+            <Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy"}</Button>
+            <Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "..." : "Shorten"}</Button>
+            <Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}Re-gen</Button>
+            <Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button>
+          </div>
+          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
+        </div>
+      );
+    }
+
+    // Interview: edit view or desktop
+    if (isInt && (isEdit || !isMobile)) {
+      return (
+        <div className="space-y-4">
+          <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Interview Prep Generator</div>
+          <div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3">
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div>
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div>
+            <Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Interview: mobile preview view
+    if (isInt && !isEdit && isMobile) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+            <Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button>
+            <Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button>
+          </div>
+          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
+        </div>
+      );
+    }
+
+    return null;
+  })();
+
   return (
     <>
       <div ref={printContentRef} className="resume-print-container" style={{ visibility: "hidden", height: 0, overflow: "hidden" }} aria-hidden="true">{ap}</div>
 
-      {/* Magic Import Dialog — constrained height on mobile */}
       {pasteOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden">
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col">
@@ -154,12 +250,7 @@ function ResumeBuilderInner() {
               <h2 className="text-sm font-semibold flex items-center gap-2"><Wand2 className="h-4 w-4 text-indigo-500" /> Magic Import</h2>
               <button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button>
             </div>
-            <Textarea
-              value={pasteRaw}
-              onChange={(e) => setPasteRaw(e.target.value)}
-              placeholder="Paste raw LinkedIn text, old resume, or bio..."
-              className="flex-1 min-h-[30vh] max-h-[50vh] overflow-y-auto text-[16px] md:text-sm"
-            />
+            <Textarea value={pasteRaw} onChange={(e) => setPasteRaw(e.target.value)} placeholder="Paste raw LinkedIn text, old resume, or bio..." className="flex-1 min-h-[30vh] max-h-[50vh] overflow-y-auto text-[16px] md:text-sm" />
             <Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-3 shrink-0" variant="magic" size="sm">
               {pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
               {pasteLoading ? "Parsing..." : "Populate Resume"}
@@ -170,14 +261,15 @@ function ResumeBuilderInner() {
 
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
         <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
-          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0"><FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-xs md:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3"><Download className="h-3 w-3 md:h-3.5 md:w-3.5" /><span className="hidden sm:inline">Download PDF</span><span className="sm:hidden">PDF</span></Button></header>
+          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 md:gap-2.5"><div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0"><FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-xs md:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div>
+            <Button onClick={() => handlePrint()} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3"><Download className="h-3 w-3 md:h-3.5 md:w-3.5" /><span className="hidden sm:inline">Download PDF</span><span className="sm:hidden">PDF</span></Button>
+          </header>
           <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50">
             <button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isRes ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" /> Resume</button>
             <button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isCov ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Mail className="h-3.5 w-3.5" /> Cover Letter</button>
             <button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 ${isInt ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><MessageSquare className="h-3.5 w-3.5" /> Interview Prep</button>
           </nav>
-
-          {/* Resume section tabs — includes ATS tab */}
           {isRes && (
             <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">
               {tabs.map(t => (
@@ -187,70 +279,13 @@ function ResumeBuilderInner() {
               ))}
             </nav>
           )}
-
           {(isCov || isInt) && isMobile && (
             <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50">
               <button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 ${isEdit ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" />Edit</button>
               <button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 ${!isEdit ? "border-indigo-600 text-indigo-600 bg-indigo-50/50 dark:border-indigo-400 dark:text-indigo-400 dark:bg-indigo-950/30" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Eye className="h-3.5 w-3.5" />Preview</button>
             </nav>
           )}
-
-          <div className="flex-1 overflow-y-auto p-3 md:p-5">
-            {isRes ? (
-              isAts ? (
-                /* ---- ATS MATCHER TAB (desktop + mobile) ---- */
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
-                  <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
-                    <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
-                    <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
-                    {atsResult && (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>
-                        {atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}
-                        {atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* ---- RESUME FORM TABS ---- */
-                <>
-                  {/* Magic Import — hidden on mobile preview */}
-                  {(activeTab !== "preview" || !isMobile) && (
-                    <div className="mb-3"><Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="w-full gap-1.5 text-xs h-8"><Wand2 className="h-3.5 w-3.5 text-indigo-500" />Magic Import</Button></div>
-                  )}
-                  {activeTab === "personal" && <PersonalInfoSection />}
-                  {activeTab === "experience" && <ExperienceSection />}
-                  {activeTab === "projects" && <ProjectsSection />}
-                  {activeTab === "education" && <EducationSection />}
-                  {activeTab === "skills" && <SkillsSection />}
-                  {isPrev && isMobile && (
-                    <div className="flex justify-center pt-2"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
-                  )}
-                  {/* ATS Matcher — only on mobile preview */}
-                  {isPrev && isMobile && (
-                    <div className="mt-4 p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
-                      <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
-                      <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
-                      {atsResult && (
-                        <div className="space-y-2 pt-1"><div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>{atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}{atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}</div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )
-            ) : isCov ? (
-              isEdit || !isMobile ? <CoverLetterBuilder onGenerate={handleCoverGenerate} /> : (
-                <div className="space-y-3"><div className="flex items-center gap-1.5 flex-wrap print:hidden"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}Re-gen</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button></div><div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div></div>
-            ) : (
-              isEdit || !isMobile ? (
-                <div className="space-y-4"><div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Interview Prep Generator</div><div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3"><div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div><div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div><Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button></div></div>
-              ) : (
-                <div className="space-y-3"><div className="flex items-center gap-1.5 flex-wrap print:hidden"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button></div><div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div></div>
-            ))}
-          </div>
+          <div className="flex-1 overflow-y-auto p-3 md:p-5">{leftPaneContent}</div>
           <footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3"><p className="text-[10px] md:text-[11px] text-zinc-400 dark:text-zinc-500">Powered by DeepSeek AI</p><a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4" /></a></footer>
         </aside>
         <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-6 shrink-0">
