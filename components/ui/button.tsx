@@ -14,13 +14,15 @@ const buttonVariants = cva(
           "bg-red-600 text-white shadow-sm hover:bg-red-700",
         outline:
           "border border-zinc-200 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
+        magic:
+          "bg-[#4169E1] text-white hover:bg-[#4169E1]/90 shadow-sm transition-all",
+        magicOutline:
+          "border border-[#4169E1]/20 bg-[#4169E1]/5 text-[#4169E1] hover:bg-[#4169E1]/10 dark:border-[#4169E1]/30 dark:bg-[#4169E1]/10 dark:text-[#4169E1]/90 dark:hover:bg-[#4169E1]/20",
         secondary:
           "bg-zinc-100 text-zinc-900 shadow-sm hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
         ghost:
           "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         link: "text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50",
-        magic:
-          "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-white hover:text-zinc-900 hover:border-zinc-300 shadow-sm dark:bg-indigo-950 dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 dark:hover:border-zinc-600",
       },
       size: {
         default: "h-9 px-4 py-2",

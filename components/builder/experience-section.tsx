@@ -39,8 +39,8 @@ function TailorDialog({
   };
 
   return (
-    <div className="mt-2 p-3 rounded-lg border border-indigo-200 bg-indigo-50/50 dark:border-indigo-800 dark:bg-indigo-950/30 space-y-2">
-      <label className="text-xs font-semibold text-indigo-700 dark:text-indigo-400">
+    <div className="mt-2 p-3 rounded-lg border border-[#4169E1] bg-[#4169E1]/5 dark:border-[#4169E1]/50 dark:bg-[#4169E1]/10 space-y-2">
+      <label className="text-xs font-semibold text-[#4169E1] dark:text-[#4169E1]">
         Tailor to Job Description
       </label>
       <Textarea value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} placeholder="Paste the target job description here..." className="min-h-[80px] text-xs" />

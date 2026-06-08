@@ -8,8 +8,8 @@
   --breakpoint-xs: 380px;
   --color-border: hsl(240, 5.9%, 90%);
   --color-input: hsl(240, 5.9%, 90%);
-  --color-ring: hsl(243, 75%, 59%);
-  --color-primary: hsl(243, 75%, 59%);
+  --color-ring: #4169E1;
+  --color-primary: #4169E1;
   --color-primary-foreground: hsl(0, 0%, 100%);
   --color-secondary: hsl(240, 4.8%, 95.9%);
   --color-secondary-foreground: hsl(240, 5.9%, 10%);
@@ -28,7 +28,7 @@
 :root {
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
-  --primary: 243 75% 59%;
+  --primary: 225 72.7% 56.9%;
   --primary-foreground: 0 0% 100%;
   --secondary: 240 4.8% 95.9%;
   --secondary-foreground: 240 5.9% 10%;
@@ -40,14 +40,14 @@
   --destructive-foreground: 0 0% 98%;
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
-  --ring: 243 75% 59%;
+  --ring: #4169E1;
 }
 
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
-  --primary: 243 75% 65%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 225 72.7% 56.9%;
+  --primary-foreground: 0 0% 98%;
   --secondary: 240 3.7% 15.9%;
   --secondary-foreground: 0 0% 98%;
   --muted: 240 3.7% 15.9%;
