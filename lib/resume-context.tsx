@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from "react";
 import type {
   ResumeData,
   PersonalInfo,
@@ -175,6 +175,26 @@ const ResumeContext = createContext<ResumeContextValue | null>(null);
 
 export function ResumeProvider({ children }: { children: React.ReactNode }) {
   const [data, dispatch] = useReducer(resumeReducer, DEFAULT_RESUME_DATA);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ascent-resume-data");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        dispatch({ type: "LOAD_RESUME", payload: parsed });
+      } catch (e) {
+        console.error("Failed to parse resume data from local storage", e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("ascent-resume-data", JSON.stringify(data));
+    }
+  }, [data, isLoaded]);
 
   const updatePersonalInfo = useCallback(
     (payload: Partial<PersonalInfo>) =>

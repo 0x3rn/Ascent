@@ -206,7 +206,10 @@ function ResumeBuilderInner() {
       return (
         <>
           {(!isPrev || !isMobile) && (
-            <div className="mb-3"><Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="w-full gap-1.5 text-xs h-8"><Wand2 className="h-3.5 w-3.5 text-indigo-500" />Magic Import</Button></div>
+            <div className="mb-3 flex gap-2">
+              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8"><Wand2 className="h-3.5 w-3.5 text-teal-600" />Smart Parse</Button>
+              <Button onClick={() => { if (confirm("Are you sure you want to clear all resume data? This cannot be undone.")) dispatchers.resetResume(); }} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900"><Trash2 className="h-3.5 w-3.5" />Clear All</Button>
+            </div>
           )}
           {activeTab === "personal" && <PersonalInfoSection />}
           {activeTab === "experience" && <ExperienceSection />}
