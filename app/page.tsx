@@ -117,15 +117,45 @@ function ResumeBuilderInner() {
     pageStyle: `@page { size: A4; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print, .no-print * { display: none !important; } }`,
   });
 
-  const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {} };
+  const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { } };
   const handleDelete = () => { setCoverBody(""); setCoverTargetRole(""); setCoverCompanyName(""); setCoverUserName(""); setCoverSkills([]); };
-  const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody)); } catch {} finally { setShortening(false); } };
+  const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody)); } catch { } finally { setShortening(false); } };
   const handleCoverGenerate = (body: string, tRole: string, cName: string, uName: string, sk: string[], ud: boolean = false) => { setCoverBody(body); setCoverTargetRole(tRole); setCoverCompanyName(cName); setCoverUserName(uName); setCoverSkills(sk); setCoverUseResumeData(ud); if (isMobile) setCoverView("preview"); };
-  const handleRegenerate = async () => { if (!coverTargetRole || !coverCompanyName || !coverUserName) return; setRegenerating(true); try { setCoverBody(await generateCoverLetter(coverUserName, coverTargetRole, coverCompanyName, coverSkills, "")); } catch {} finally { setRegenerating(false); } };
-  const handlePaste = async () => { if (!pasteRaw.trim()) return; setPasteLoading(true); try { const j = await parseRawResume(pasteRaw); const p = JSON.parse(j); if (p.personalInfo) dispatchers.updatePersonalInfo(p.personalInfo); setPasteOpen(false); setPasteRaw(""); } catch { alert("Failed to parse."); } finally { setPasteLoading(false); } };
+  const handleRegenerate = async () => { if (!coverTargetRole || !coverCompanyName || !coverUserName) return; setRegenerating(true); try { setCoverBody(await generateCoverLetter(coverUserName, coverTargetRole, coverCompanyName, coverSkills, "")); } catch { } finally { setRegenerating(false); } };
+  const handlePaste = async () => {
+    if (!pasteRaw.trim()) return;
+    setPasteLoading(true);
+    try {
+      const j = await parseRawResume(pasteRaw);
+      const p = JSON.parse(j);
+      const newData = { ...data };
+      if (p.personalInfo) newData.personalInfo = { ...newData.personalInfo, ...p.personalInfo };
+      if (p.experience && Array.isArray(p.experience)) newData.experience = p.experience.map((exp: any) => ({ ...exp, id: crypto.randomUUID() }));
+      if (p.education && Array.isArray(p.education)) newData.education = p.education.map((edu: any) => ({ ...edu, id: crypto.randomUUID() }));
+      if (p.skills && Array.isArray(p.skills)) newData.skills = p.skills.map((sk: any) => ({ ...sk, id: crypto.randomUUID() }));
+      if (p.projects && Array.isArray(p.projects)) newData.projects = p.projects.map((proj: any) => ({ ...proj, id: crypto.randomUUID() }));
+      dispatchers.loadResume(newData);
+      setPasteOpen(false);
+      setPasteRaw("");
+    } catch {
+      alert("Failed to parse.");
+    } finally {
+      setPasteLoading(false);
+    }
+  };
   const handleATSScan = async () => { if (!atsJD.trim()) return; setAtsLoading(true); setAtsResult(null); try { const bg = `Summary: ${data.personalInfo.summary}\nExperience: ${data.experience.map(e => `${e.role} at ${e.company}: ${e.bullets}`).join("\n")}\nSkills: ${data.skills.map(s => `${s.category}: ${s.skills}`).join("\n")}`; setAtsResult(JSON.parse(await scoreATS(bg, atsJD))); } catch { setAtsResult(null); } finally { setAtsLoading(false); } };
-  const handleIntGenerate = async () => { if (!intRole.trim() || !intCompany.trim()) return; setIntGenerating(true); try { const bg = `Summary: ${data.personalInfo.summary}\nExperience: ${data.experience.map(e => `${e.role} at ${e.company}: ${e.bullets}`).join("\n")}\nSkills: ${data.skills.map(s => `${s.category}: ${s.skills}`).join("\n")}`; setIntContent(await generateInterviewPrep(intRole, intCompany, bg)); } catch {} finally { setIntGenerating(false); } };
-  const handleIntCopy = async () => { if (!intContent) return; try { await navigator.clipboard.writeText(intContent); setIntCopied(true); setTimeout(() => setIntCopied(false), 2000); } catch {} };
+  const handleIntGenerate = async () => {
+    if (!intRole.trim() || !intCompany.trim()) return;
+    setIntGenerating(true);
+    try {
+      const bg = `Summary: ${data.personalInfo.summary}\nExperience: ${data.experience.map(e => `${e.role} at ${e.company}: ${e.bullets}`).join("\n")}\nSkills: ${data.skills.map(s => `${s.category}: ${s.skills}`).join("\n")}`;
+      setIntContent(await generateInterviewPrep(intRole, intCompany, bg));
+      if (isMobile) setCoverView("preview");
+    } catch { } finally {
+      setIntGenerating(false);
+    }
+  };
+  const handleIntCopy = async () => { if (!intContent) return; try { await navigator.clipboard.writeText(intContent); setIntCopied(true); setTimeout(() => setIntCopied(false), 2000); } catch { } };
   const handleIntClear = () => { setIntContent(""); setIntRole(""); setIntCompany(""); };
 
   const upScale = useCallback(() => { const w = previewWrapperRef.current?.parentElement?.clientWidth ?? 350; setPreviewScale(Math.min(w / A4_WIDTH_PX, 1)); }, []);
@@ -211,7 +241,7 @@ function ResumeBuilderInner() {
             <Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}Re-gen</Button>
             <Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button>
           </div>
-          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
+          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
         </div>
       );
     }
@@ -236,7 +266,7 @@ function ResumeBuilderInner() {
             <Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button>
             <Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button>
           </div>
-          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
+          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
         </div>
       );
     }
