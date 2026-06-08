@@ -15,9 +15,9 @@ const buttonVariants = cva(
         outline:
           "border border-zinc-200 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
         magic:
-          "bg-[#4169E1] text-white hover:bg-[#4169E1]/90 shadow-sm transition-all",
+          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all active:scale-[0.98]",
         magicOutline:
-          "border border-[#4169E1]/20 bg-[#4169E1]/5 text-[#4169E1] hover:bg-[#4169E1]/10 dark:border-[#4169E1]/30 dark:bg-[#4169E1]/10 dark:text-[#4169E1]/90 dark:hover:bg-[#4169E1]/20",
+          "border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 shadow-sm transition-all active:scale-[0.98]",
         secondary:
           "bg-zinc-100 text-zinc-900 shadow-sm hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
         ghost:

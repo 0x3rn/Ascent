@@ -140,7 +140,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
               {skills.map((skill, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full bg-[#4169E1]/10 text-[#4169E1] border border-[#4169E1]/20 dark:bg-[#4169E1]/20 dark:text-[#4169E1]/80 dark:border-[#4169E1]/30"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-primary/80 dark:border-primary/30"
                 >
                   {skill}
                   <button onClick={() => handleRemoveSkill(i)} className="hover:text-red-500 transition-colors">
@@ -157,7 +157,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
             type="checkbox"
             checked={useResumeData}
             onChange={(e) => setUseResumeData(e.target.checked)}
-            className="w-3.5 h-3.5 rounded border-zinc-300 text-[#4169E1] focus:ring-[#4169E1]"
+            className="w-3.5 h-3.5 rounded border-zinc-300 text-primary focus:ring-primary"
           />
           <span className="text-xs text-zinc-600">Tailor using my Resume data</span>
         </label>
