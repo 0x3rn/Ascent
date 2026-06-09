@@ -19,6 +19,7 @@ import {
   shortenCoverLetter, generateCoverLetter,
   parseRawResume, scoreATS, generateInterviewPrep,
 } from "@/app/actions/resume-ai";
+import { parsePdfServer } from "@/app/actions/pdf-parse";
 import {
   FileText, Download, ExternalLink, User, Briefcase, FolderKanban,
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
@@ -106,7 +107,7 @@ function ResumeBuilderInner() {
   const coverPreviewWrapperRef = useRef<HTMLDivElement>(null);
   const intPreviewWrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setHasMounted(true); const check = () => setIsMobile(window.innerWidth < 768); check(); window.addEventListener("resize", check); return () => window.removeEventListener("resize", check); }, []);
+  useEffect(() => { setTimeout(() => setHasMounted(true), 0); const check = () => setIsMobile(window.innerWidth < 768); check(); window.addEventListener("resize", check); return () => window.removeEventListener("resize", check); }, []);
 
   const firstName = (data.personalInfo.fullName || "My").trim().split(/\s+/)[0] || "My";
   const pdfTitle = `${firstName} Resume`;
@@ -130,10 +131,10 @@ function ResumeBuilderInner() {
       const p = JSON.parse(j);
       const newData = { ...data };
       if (p.personalInfo) newData.personalInfo = { ...newData.personalInfo, ...p.personalInfo };
-      if (p.experience && Array.isArray(p.experience)) newData.experience = p.experience.map((exp: any) => ({ ...exp, id: crypto.randomUUID() }));
-      if (p.education && Array.isArray(p.education)) newData.education = p.education.map((edu: any) => ({ ...edu, id: crypto.randomUUID() }));
-      if (p.skills && Array.isArray(p.skills)) newData.skills = p.skills.map((sk: any) => ({ ...sk, id: crypto.randomUUID() }));
-      if (p.projects && Array.isArray(p.projects)) newData.projects = p.projects.map((proj: any) => ({ ...proj, id: crypto.randomUUID() }));
+      if (p.experience && Array.isArray(p.experience)) newData.experience = p.experience.map((exp: Record<string, unknown>) => ({ ...exp, id: crypto.randomUUID() }));
+      if (p.education && Array.isArray(p.education)) newData.education = p.education.map((edu: Record<string, unknown>) => ({ ...edu, id: crypto.randomUUID() }));
+      if (p.skills && Array.isArray(p.skills)) newData.skills = p.skills.map((sk: Record<string, unknown>) => ({ ...sk, id: crypto.randomUUID() }));
+      if (p.projects && Array.isArray(p.projects)) newData.projects = p.projects.map((proj: Record<string, unknown>) => ({ ...proj, id: crypto.randomUUID() }));
       dispatchers.loadResume(newData);
       setPasteOpen(false);
       setPasteRaw("");
@@ -148,20 +149,13 @@ function ResumeBuilderInner() {
     if (!file) return;
     setPasteLoading(true);
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
-      
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let text = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map((item: any) => item.str).join(" ") + "\n";
-      }
+      const formData = new FormData();
+      formData.append("file", file);
+      const text = await parsePdfServer(formData);
       setPasteRaw(text || "");
     } catch (err) {
-      alert("Could not parse PDF. Please try copying and pasting the text instead.");
+      const error = err as Error;
+      alert(error.message || "Could not parse PDF. Please try copying and pasting the text instead.");
     } finally {
       setPasteLoading(false);
     }
@@ -230,7 +224,7 @@ function ResumeBuilderInner() {
         <>
           {(!isPrev || !isMobile) && (
             <div className="mb-3 flex gap-2">
-              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 transition-colors active:scale-95"><Sparkles className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
+              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 active:scale-90"><Sparkles className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
               <Button onClick={() => { if (confirm("Are you sure you want to clear all resume data? This cannot be undone.")) dispatchers.resetResume(); }} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900"><Trash2 className="h-3.5 w-3.5" />Clear All</Button>
             </div>
           )}
@@ -303,7 +297,7 @@ function ResumeBuilderInner() {
   return (
     <>
       <div ref={printContentRef} className="resume-print-container" style={{ visibility: "hidden", height: 0, overflow: "hidden" }} aria-hidden="true">{ap}</div>
-      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><p className="text-xs text-zinc-500">Paste raw resume text or upload PDF</p><div className="shrink-0"><input type="file" accept="application/pdf" onChange={handlePdfUpload} disabled={pasteLoading} className="block w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 disabled:opacity-50 transition-colors" /></div><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here after uploading, or type directly..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-[0.98] transition-all" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
+      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><p className="text-xs text-zinc-500">Paste raw resume text or upload PDF</p><div className="shrink-0"><input type="file" accept="application/pdf" onChange={handlePdfUpload} disabled={pasteLoading} className="block w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 disabled:opacity-50 transition-colors" /></div><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here after uploading, or type directly..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-95 transition-all duration-200" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
         <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-primary flex items-center justify-center shrink-0"><FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary-foreground" /></div><div><h1 className="text-xs md:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3 active:scale-95 transition-transform"><Download className="h-3 w-3 md:h-3.5 md:w-3.5" /><span className="hidden sm:inline">Download PDF</span><span className="sm:hidden">PDF</span></Button></header>
