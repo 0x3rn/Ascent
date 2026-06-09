@@ -41,6 +41,10 @@ export function PersonalInfoSection() {
           <label className="text-xs font-medium text-zinc-500">LinkedIn</label>
           <Input value={personalInfo.linkedin} onChange={(e) => updatePersonalInfo({ linkedin: e.target.value })} placeholder="linkedin.com/in/..." />
         </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-zinc-500">GitHub</label>
+          <Input value={personalInfo.github || ""} onChange={(e) => updatePersonalInfo({ github: e.target.value })} placeholder="github.com/..." />
+        </div>
         <div className="space-y-1.5 col-span-2">
           <label className="text-xs font-medium text-zinc-500">Website</label>
           <Input value={personalInfo.website} onChange={(e) => updatePersonalInfo({ website: e.target.value })} placeholder="yourwebsite.co" />

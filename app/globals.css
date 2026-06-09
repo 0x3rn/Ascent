@@ -94,7 +94,6 @@
     margin-top: 0 !important;
     padding-top: 0 !important;
   }
-  .resume-print-container * { display: revert !important; visibility: visible !important; }
 }
 
 @media (min-width: 768px) {
