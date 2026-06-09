@@ -147,11 +147,36 @@ function ResumeBuilderInner() {
       const j = await parseRawResume(pasteRaw);
       const p = JSON.parse(j);
       const newData = { ...data };
-      if (p.personalInfo) newData.personalInfo = { ...newData.personalInfo, ...p.personalInfo };
-      if (p.experience && Array.isArray(p.experience)) newData.experience = p.experience.map((exp: Record<string, unknown>) => ({ ...exp, id: crypto.randomUUID() }));
-      if (p.education && Array.isArray(p.education)) newData.education = p.education.map((edu: Record<string, unknown>) => ({ ...edu, id: crypto.randomUUID() }));
-      if (p.skills && Array.isArray(p.skills)) newData.skills = p.skills.map((sk: Record<string, unknown>) => ({ ...sk, id: crypto.randomUUID() }));
-      if (p.projects && Array.isArray(p.projects)) newData.projects = p.projects.map((proj: Record<string, unknown>) => ({ ...proj, id: crypto.randomUUID() }));
+      
+      if (p.personalInfo) {
+        const currentPI = newData.personalInfo;
+        const newPI = p.personalInfo;
+        newData.personalInfo = {
+          ...currentPI,
+          fullName: newPI.fullName || currentPI.fullName,
+          title: newPI.title || currentPI.title,
+          email: newPI.email || currentPI.email,
+          phone: newPI.phone || currentPI.phone,
+          location: newPI.location || currentPI.location,
+          linkedin: newPI.linkedin || currentPI.linkedin,
+          website: newPI.website || currentPI.website,
+          summary: newPI.summary || currentPI.summary,
+        };
+      }
+      
+      if (p.experience && Array.isArray(p.experience) && p.experience.length > 0) {
+        newData.experience = p.experience.map((exp: Record<string, unknown>) => ({ ...exp, id: crypto.randomUUID() }));
+      }
+      if (p.education && Array.isArray(p.education) && p.education.length > 0) {
+        newData.education = p.education.map((edu: Record<string, unknown>) => ({ ...edu, id: crypto.randomUUID() }));
+      }
+      if (p.skills && Array.isArray(p.skills) && p.skills.length > 0) {
+        newData.skills = p.skills.map((sk: Record<string, unknown>) => ({ ...sk, id: crypto.randomUUID() }));
+      }
+      if (p.projects && Array.isArray(p.projects) && p.projects.length > 0) {
+        newData.projects = p.projects.map((proj: Record<string, unknown>) => ({ ...proj, id: crypto.randomUUID() }));
+      }
+      
       dispatchers.loadResume(newData);
       setPasteOpen(false);
       setPasteRaw("");
