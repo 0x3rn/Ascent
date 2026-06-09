@@ -21,6 +21,7 @@ const COLOR_MAP: Record<string, string> = {
   slate: "#64748b",
   navy: "#1e3a5f",
   forest: "#2d6a4f",
+  black: "#18181b",
 };
 
 export function CoverLetterPreview({ body, targetRole, companyName, userName, themeFont = "inter", themeAccent = "slate" }: CoverLetterPreviewProps) {

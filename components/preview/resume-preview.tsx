@@ -20,6 +20,7 @@ const COLOR_MAP: Record<string, string> = {
   slate: "#64748b",
   navy: "#1e3a5f",
   forest: "#2d6a4f",
+  black: "#18181b",
 };
 
 const GithubIcon = ({ className }: { className?: string }) => (
@@ -82,9 +83,19 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
   const accentColor = COLOR_MAP[themeAccent] || COLOR_MAP.slate;
 
   return (
-    <div className="w-[210mm] min-h-[297mm] bg-white text-zinc-900 shadow-2xl print:shadow-none print:w-auto print:h-auto print:min-h-0 print:m-0" style={{ fontFamily }}>
-      <div className="px-[18mm] py-[16mm] print:px-[18mm] print:py-[16mm]">
-        <header className="text-center mb-3 print:break-after-avoid">
+    <div className="w-[210mm] min-h-[297mm] bg-white text-zinc-900 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-auto print:h-auto print:min-h-0 print:m-0" style={{ fontFamily }}>
+      <table className="w-full border-0 border-collapse">
+        <thead className="hidden print:table-header-group">
+          <tr><td style={{ height: "16mm" }}></td></tr>
+        </thead>
+        <tfoot className="hidden print:table-footer-group">
+          <tr><td style={{ height: "16mm" }}></td></tr>
+        </tfoot>
+        <tbody>
+          <tr>
+            <td>
+              <div className="px-[18mm] py-[16mm] print:px-[18mm] print:py-0">
+                <header className="text-center mb-3 print:break-after-avoid">
           <h1 className="text-[18pt] font-bold leading-tight uppercase" style={{ color: accentColor }}>{personalInfo.fullName || "Your Name"}</h1>
           {personalInfo.title && (<p className="text-[11.5pt] text-zinc-600 mt-0.5 font-semibold leading-snug">{personalInfo.title}</p>)}
           <div className="flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-1.5 text-[9pt] text-zinc-500 print:justify-center">
@@ -109,8 +120,8 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
               <div key={exp.id} className="mb-2 print:break-inside-avoid">
                 <div className="flex justify-between items-start gap-2">
                   <div>
-                    <h3 className="text-[11.5pt] font-semibold leading-snug text-zinc-900">{exp.role || "Role"}</h3>
-                    {exp.company && (<div className="text-[10pt] italic text-zinc-700 mt-0.5">{exp.company}</div>)}
+                    <h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{exp.role || "Role"}</h3>
+                    {exp.company && (<div className="text-[9.5pt] italic text-zinc-700 mt-0.5">{exp.company}</div>)}
                   </div>
                   <div className="text-right whitespace-nowrap shrink-0">
                     <div className="text-[9pt] text-zinc-500">
@@ -129,13 +140,13 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
         {projects.length > 0 && (
           <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Project{projects.length !== 1 ? "s" : ""}</h2>
-            {projects.map((proj) => (<div key={proj.id} className="mb-2 print:break-inside-avoid"><div className="flex justify-between items-baseline gap-2"><h3 className="text-[11.5pt] font-semibold leading-snug text-zinc-900">{proj.name || "Project Name"}</h3>{proj.link && <span className="text-[9pt] text-zinc-500 whitespace-nowrap shrink-0">{proj.link}</span>}</div>{proj.skills && <p className="text-[9pt] italic text-zinc-600 mt-0.5">{proj.skills}</p>}{proj.bullets && (<div className="mt-0.5 ml-0"><BulletList text={proj.bullets} /></div>)}</div>))}
+            {projects.map((proj) => (<div key={proj.id} className="mb-2 print:break-inside-avoid"><div className="flex justify-between items-baseline gap-2"><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{proj.name || "Project Name"}</h3>{proj.link && <span className="text-[9pt] text-zinc-500 whitespace-nowrap shrink-0">{proj.link}</span>}</div>{proj.skills && <p className="text-[9pt] italic text-zinc-600 mt-0.5">{proj.skills}</p>}{proj.bullets && (<div className="mt-0.5 ml-0"><BulletList text={proj.bullets} /></div>)}</div>))}
           </section>
         )}
         {education.length > 0 && (
           <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Education</h2>
-            {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-1 print:break-inside-avoid"><div><h3 className="text-[11.5pt] font-semibold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[10.5pt] leading-[1.4] text-zinc-600">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> &mdash; GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> &ndash; </span>}{edu.endDate}</div></div>))}
+            {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-1 print:break-inside-avoid"><div><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[9.5pt] leading-[1.4] text-zinc-600">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> &mdash; GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> &ndash; </span>}{edu.endDate}</div></div>))}
           </section>
         )}
         {skills.length > 0 && (
@@ -145,6 +156,10 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
           </section>
         )}
       </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
