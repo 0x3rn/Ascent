@@ -247,7 +247,7 @@ function ResumeBuilderInner() {
           {isPrev && isMobile && (
               <div className="flex flex-col pt-2">
                 {renderThemeSelector()}
-                <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
+                <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
               </div>
           )}
         </>
