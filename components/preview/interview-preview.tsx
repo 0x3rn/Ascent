@@ -21,6 +21,7 @@ const COLOR_MAP: Record<string, string> = {
   slate: "#64748b",
   navy: "#1e3a5f",
   forest: "#2d6a4f",
+  black: "#18181b",
 };
 
 export function InterviewPreview({ content, targetRole, companyName, themeFont, themeAccent }: InterviewPreviewProps) {
@@ -57,7 +58,7 @@ export function InterviewPreview({ content, targetRole, companyName, themeFont, 
                   />
                 ) : (
                   <div className="text-[12pt] leading-[1.5] text-zinc-400 italic">
-                    <p>Enter a target role and company name, then click "Generate Prep Guide" to create custom interview questions based on your resume.</p>
+                    <p>Enter a target role and company name, then click &quot;Generate Prep Guide&quot; to create custom interview questions based on your resume.</p>
                   </div>
                 )}
               </div>

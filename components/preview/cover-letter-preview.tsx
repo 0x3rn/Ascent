@@ -21,6 +21,7 @@ const COLOR_MAP: Record<string, string> = {
   slate: "#64748b",
   navy: "#1e3a5f",
   forest: "#2d6a4f",
+  black: "#18181b",
 };
 
 export function CoverLetterPreview({ body, targetRole, companyName, userName, themeFont = "inter", themeAccent = "slate" }: CoverLetterPreviewProps) {
@@ -43,7 +44,7 @@ export function CoverLetterPreview({ body, targetRole, companyName, userName, th
                 {body ? (
                   <div className="text-[12pt] leading-[1.5] text-zinc-700 space-y-3 mb-0">{body.split("\n\n").map((p, i) => <p key={i}>{p.trim()}</p>)}</div>
                 ) : (
-                  <div className="text-[12pt] leading-[1.5] text-zinc-400 space-y-3 mb-0 italic"><p>Enter your details and click "Generate Cover Letter" to create a tailored, AI-powered cover letter.</p></div>
+                  <div className="text-[12pt] leading-[1.5] text-zinc-400 space-y-3 mb-0 italic"><p>Enter your details and click &quot;Generate Cover Letter&quot; to create a tailored, AI-powered cover letter.</p></div>
                 )}
                 <div className="mt-8">
                   <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-4">Sincerely,</p>

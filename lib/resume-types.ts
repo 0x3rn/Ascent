@@ -5,6 +5,7 @@ export interface PersonalInfo {
   phone: string;
   location: string;
   linkedin: string;
+  github: string;
   website: string;
   summary: string;
 }
@@ -58,6 +59,7 @@ export const EMPTY_PERSONAL_INFO: PersonalInfo = {
   phone: "",
   location: "",
   linkedin: "",
+  github: "",
   website: "",
   summary: "",
 };
@@ -104,6 +106,7 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
     phone: "+1 (415) 555-0147",
     location: "San Francisco, CA",
     linkedin: "linkedin.com/in/asterling",
+    github: "github.com/asterling",
     website: "asterling.co",
     summary:
       "Product leader with 8+ years of experience driving products at high-growth SaaS companies. Scaled a B2B platform from $2M to $18M ARR in 2 years. Passionate about data-informed roadmaps, cross-functional leadership, and relentless user focus.",

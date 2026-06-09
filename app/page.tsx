@@ -19,6 +19,7 @@ import {
   shortenCoverLetter, generateCoverLetter,
   parseRawResume, scoreATS, generateInterviewPrep,
 } from "@/app/actions/resume-ai";
+
 import {
   FileText, Download, ExternalLink, User, Briefcase, FolderKanban,
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
@@ -59,6 +60,7 @@ const COLORS = [
   { value: "slate", label: "Slate" },
   { value: "navy", label: "Navy" },
   { value: "forest", label: "Forest" },
+  { value: "black", label: "Black" },
 ];
 
 function ResumeBuilderInner() {
@@ -106,16 +108,31 @@ function ResumeBuilderInner() {
   const coverPreviewWrapperRef = useRef<HTMLDivElement>(null);
   const intPreviewWrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setHasMounted(true); const check = () => setIsMobile(window.innerWidth < 768); check(); window.addEventListener("resize", check); return () => window.removeEventListener("resize", check); }, []);
+  useEffect(() => { setTimeout(() => setHasMounted(true), 0); const check = () => setIsMobile(window.innerWidth < 768); check(); window.addEventListener("resize", check); return () => window.removeEventListener("resize", check); }, []);
 
   const firstName = (data.personalInfo.fullName || "My").trim().split(/\s+/)[0] || "My";
   const pdfTitle = `${firstName} Resume`;
 
-  const handlePrint = useReactToPrint({
-    contentRef: printContentRef,
-    documentTitle: pdfTitle,
-    pageStyle: `@page { size: A4; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .no-print, .no-print * { display: none !important; } }`,
-  });
+  const handlePrint = useCallback(() => {
+    const originalTitle = document.title;
+    document.title = pdfTitle;
+    window.print();
+    document.title = originalTitle;
+  }, [pdfTitle]);
+
+  const renderThemeSelector = () => (
+    <div className="flex items-center gap-3 self-start print:hidden rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800 mb-4 w-full md:w-auto md:mb-0 justify-between md:justify-start">
+      <div className="flex items-center gap-2 flex-1 md:flex-none">
+        <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Font</span>
+        <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{FONTS.map(f => <option key={f.value} value={f.value} style={{ color: "#000", backgroundColor: "#fff" }}>{f.label}</option>)}</select>
+      </div>
+      <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 hidden md:block" />
+      <div className="flex items-center gap-2 flex-1 md:flex-none">
+        <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Color</span>
+        <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{COLORS.map(c => <option key={c.value} value={c.value} style={{ color: "#000", backgroundColor: "#fff" }}>{c.label}</option>)}</select>
+      </div>
+    </div>
+  );
 
   const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { } };
   const handleDelete = () => { setCoverBody(""); setCoverTargetRole(""); setCoverCompanyName(""); setCoverUserName(""); setCoverSkills([]); };
@@ -130,10 +147,10 @@ function ResumeBuilderInner() {
       const p = JSON.parse(j);
       const newData = { ...data };
       if (p.personalInfo) newData.personalInfo = { ...newData.personalInfo, ...p.personalInfo };
-      if (p.experience && Array.isArray(p.experience)) newData.experience = p.experience.map((exp: any) => ({ ...exp, id: crypto.randomUUID() }));
-      if (p.education && Array.isArray(p.education)) newData.education = p.education.map((edu: any) => ({ ...edu, id: crypto.randomUUID() }));
-      if (p.skills && Array.isArray(p.skills)) newData.skills = p.skills.map((sk: any) => ({ ...sk, id: crypto.randomUUID() }));
-      if (p.projects && Array.isArray(p.projects)) newData.projects = p.projects.map((proj: any) => ({ ...proj, id: crypto.randomUUID() }));
+      if (p.experience && Array.isArray(p.experience)) newData.experience = p.experience.map((exp: Record<string, unknown>) => ({ ...exp, id: crypto.randomUUID() }));
+      if (p.education && Array.isArray(p.education)) newData.education = p.education.map((edu: Record<string, unknown>) => ({ ...edu, id: crypto.randomUUID() }));
+      if (p.skills && Array.isArray(p.skills)) newData.skills = p.skills.map((sk: Record<string, unknown>) => ({ ...sk, id: crypto.randomUUID() }));
+      if (p.projects && Array.isArray(p.projects)) newData.projects = p.projects.map((proj: Record<string, unknown>) => ({ ...proj, id: crypto.randomUUID() }));
       dispatchers.loadResume(newData);
       setPasteOpen(false);
       setPasteRaw("");
@@ -143,29 +160,7 @@ function ResumeBuilderInner() {
       setPasteLoading(false);
     }
   };
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPasteLoading(true);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
-      
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let text = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map((item: any) => item.str).join(" ") + "\n";
-      }
-      setPasteRaw(text || "");
-    } catch (err) {
-      alert("Could not parse PDF. Please try copying and pasting the text instead.");
-    } finally {
-      setPasteLoading(false);
-    }
-  };
+
   const handleATSScan = async () => { if (!atsJD.trim()) return; setAtsLoading(true); setAtsResult(null); try { const bg = `Summary: ${data.personalInfo.summary}\nExperience: ${data.experience.map(e => `${e.role} at ${e.company}: ${e.bullets}`).join("\n")}\nSkills: ${data.skills.map(s => `${s.category}: ${s.skills}`).join("\n")}`; setAtsResult(JSON.parse(await scoreATS(bg, atsJD))); } catch { setAtsResult(null); } finally { setAtsLoading(false); } };
   const handleIntGenerate = async () => {
     if (!intRole.trim() || !intCompany.trim()) return;
@@ -230,8 +225,8 @@ function ResumeBuilderInner() {
         <>
           {(!isPrev || !isMobile) && (
             <div className="mb-3 flex gap-2">
-              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 transition-colors active:scale-95"><Sparkles className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
-              <Button onClick={() => { if (confirm("Are you sure you want to clear all resume data? This cannot be undone.")) dispatchers.resetResume(); }} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900"><Trash2 className="h-3.5 w-3.5" />Clear All</Button>
+              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 active:scale-90"><Sparkles className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
+              <Button onClick={() => { if (confirm("Are you sure you want to clear all resume data? This cannot be undone.")) dispatchers.resetResume(); }} variant="destructive" size="sm" className="flex-1 gap-1.5 text-xs h-8 active:scale-90 transition-all duration-200"><Trash2 className="h-3.5 w-3.5" />Clear All</Button>
             </div>
           )}
           {activeTab === "personal" && <PersonalInfoSection />}
@@ -241,7 +236,10 @@ function ResumeBuilderInner() {
           {activeTab === "skills" && <SkillsSection />}
           {isPrev && isMobile && (
             <>
-              <div className="flex justify-center pt-2"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
+              <div className="flex flex-col pt-2">
+                {renderThemeSelector()}
+                <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
+              </div>
               <div className="mt-4 p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
                 <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
@@ -261,12 +259,13 @@ function ResumeBuilderInner() {
     if (isCov && !isEdit && isMobile) {
       return (
         <div className="space-y-3">
-          <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+          <div className="flex items-center gap-1.5 flex-wrap print:hidden mb-2">
             <Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy"}</Button>
             <Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "..." : "Shorten"}</Button>
             <Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}Re-gen</Button>
             <Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button>
           </div>
+          {renderThemeSelector()}
           <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
         </div>
       );
@@ -288,10 +287,11 @@ function ResumeBuilderInner() {
     if (isInt && !isEdit && isMobile) {
       return (
         <div className="space-y-3">
-          <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+          <div className="flex items-center gap-1.5 flex-wrap print:hidden mb-2">
             <Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button>
             <Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button>
           </div>
+          {renderThemeSelector()}
           <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
         </div>
       );
@@ -302,18 +302,40 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      <div ref={printContentRef} className="resume-print-container" style={{ visibility: "hidden", height: 0, overflow: "hidden" }} aria-hidden="true">{ap}</div>
-      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><p className="text-xs text-zinc-500">Paste raw resume text or upload PDF</p><div className="shrink-0"><input type="file" accept="application/pdf" onChange={handlePdfUpload} disabled={pasteLoading} className="block w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 disabled:opacity-50 transition-colors" /></div><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here after uploading, or type directly..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-[0.98] transition-all" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
-      <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden">
-        <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full">
-          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-7 w-7 md:h-8 md:w-8 rounded-lg bg-primary flex items-center justify-center shrink-0"><FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary-foreground" /></div><div><h1 className="text-xs md:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1 md:gap-1.5 shrink-0 text-xs h-7 md:h-8 px-2.5 md:px-3 active:scale-95 transition-transform"><Download className="h-3 w-3 md:h-3.5 md:w-3.5" /><span className="hidden sm:inline">Download PDF</span><span className="sm:hidden">PDF</span></Button></header>
-          <nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50"><button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${isRes ? "border-primary text-primary bg-primary/5 dark:border-primary dark:text-primary dark:bg-primary/10" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" />Resume</button><button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${isCov ? "border-primary text-primary bg-primary/5 dark:border-primary dark:text-primary dark:bg-primary/10" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Mail className="h-3.5 w-3.5" />Cover Letter</button><button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${isInt ? "border-primary text-primary bg-primary/5 dark:border-primary dark:text-primary dark:bg-primary/10" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><MessageSquare className="h-3.5 w-3.5" />Interview Prep</button></nav>
-          {isRes && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">{tabs.map(t => (<button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-2 md:px-3 py-2 md:py-2.5 text-[11px] md:text-xs font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === t.id ? "border-primary text-primary bg-primary/5 dark:border-primary dark:text-primary dark:bg-primary/10" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}>{"icon" in t && t.icon ? <>{t.icon} </> : null}<span>{t.label}</span></button>))}</nav>)}
-          {(isCov || isInt) && isMobile && (<nav className="shrink-0 flex border-b border-zinc-100 dark:border-zinc-800/50"><button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 transition-colors ${isEdit ? "border-primary text-primary bg-primary/5 dark:border-primary dark:text-primary dark:bg-primary/10" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><FileText className="h-3.5 w-3.5" />Edit</button><button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 transition-colors ${!isEdit ? "border-primary text-primary bg-primary/5 dark:border-primary dark:text-primary dark:bg-primary/10" : "border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"}`}><Eye className="h-3.5 w-3.5" />Preview</button></nav>)}
+      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><p className="text-xs text-zinc-500">Paste raw resume text below</p><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-95 transition-all duration-200" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
+      <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
+        <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
+          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-indigo-600 dark:text-indigo-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-indigo-600 hover:bg-indigo-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>
+          <div className="shrink-0 px-4 md:px-5 py-3 border-b border-zinc-100 dark:border-zinc-800/50">
+            <nav className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
+              <button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isRes ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-4 w-4" />Resume</button>
+              <button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isCov ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><Mail className="h-4 w-4" />Cover Letter</button>
+              <button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isInt ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><MessageSquare className="h-4 w-4" />Interview</button>
+            </nav>
+          </div>
+          {isRes && (
+            <div className="shrink-0 px-4 md:px-5 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">
+              <nav className="flex gap-1.5">
+                {tabs.map(t => (
+                  <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-full transition-all duration-200 ${activeTab === t.id ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "bg-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300"}`}>
+                    {"icon" in t && t.icon ? <>{t.icon} </> : null}<span>{t.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )}
+          {(isCov || isInt) && isMobile && (
+            <div className="shrink-0 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50">
+              <nav className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
+                <button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium rounded-lg transition-all duration-200 ${isEdit ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-3.5 w-3.5" />Edit</button>
+                <button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium rounded-lg transition-all duration-200 ${!isEdit ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><Eye className="h-3.5 w-3.5" />Preview</button>
+              </nav>
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto p-3 md:p-5">{renderLeftPane()}</div>
           <footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3"><p className="text-[10px] md:text-[11px] text-zinc-400 dark:text-zinc-500">Powered by DeepSeek AI</p><a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4" /></a></footer>
         </aside>
-        <main className="hidden md:flex flex-1 bg-zinc-100 dark:bg-zinc-900 overflow-auto items-start justify-center p-6 shrink-0"><div className="flex flex-col items-center gap-4"><div className="flex items-center gap-3 self-start print:hidden rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800"><div className="flex items-center gap-1.5"><span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Font:</span><select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-white focus:ring-0 cursor-pointer outline-none" style={{ colorScheme: "light" }}>{FONTS.map(f => <option key={f.value} value={f.value} style={{ color: "#000", backgroundColor: "#fff" }}>{f.label}</option>)}</select></div><div className="w-px h-4 bg-zinc-200 dark:bg-zinc-600" /><div className="flex items-center gap-1.5"><span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Color:</span><select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="text-[10px] border-0 bg-transparent text-zinc-900 dark:text-white focus:ring-0 cursor-pointer outline-none" style={{ colorScheme: "light" }}>{COLORS.map(c => <option key={c.value} value={c.value} style={{ color: "#000", backgroundColor: "#fff" }}>{c.label}</option>)}</select></div></div>{isRes ? <div className="origin-top shadow-2xl">{resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{shortening ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button></div><div className="origin-top shadow-2xl">{coverEl}</div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-7">{intCopied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button></div><div className="origin-top shadow-2xl">{intEl}</div></>)}</div></main>
+        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{coverEl}</div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
       </div>
     </>
   );

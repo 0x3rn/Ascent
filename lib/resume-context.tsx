@@ -187,7 +187,8 @@ export function ResumeProvider({ children }: { children: React.ReactNode }) {
         console.error("Failed to parse resume data from local storage", e);
       }
     }
-    setIsLoaded(true);
+    // This effect only initializes data if not already loaded
+    setTimeout(() => setIsLoaded(true), 0);
   }, []);
 
   useEffect(() => {
