@@ -35,7 +35,8 @@ type ResumeAction =
   | { type: "ADD_SKILL_CATEGORY" }
   | { type: "REMOVE_SKILL_CATEGORY"; id: string }
   | { type: "LOAD_RESUME"; payload: ResumeData }
-  | { type: "RESET_RESUME" };
+  | { type: "RESET_RESUME" }
+  | { type: "REORDER_ITEMS"; section: "experience" | "projects" | "education" | "skills"; startIndex: number; endIndex: number };
 
 // ---- Reducer ----
 
@@ -151,6 +152,14 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
         skills: [],
       };
 
+    case "REORDER_ITEMS": {
+      const { section, startIndex, endIndex } = action;
+      const list = Array.from(state[section] as any[]);
+      const [removed] = list.splice(startIndex, 1);
+      list.splice(endIndex, 0, removed);
+      return { ...state, [section]: list };
+    }
+
     default:
       return state;
   }
@@ -174,6 +183,7 @@ interface ResumeContextValue {
   updateSkillCategory: (id: string, payload: Partial<SkillCategory>) => void;
   addSkillCategory: () => void;
   removeSkillCategory: (id: string) => void;
+  reorderItems: (section: "experience" | "projects" | "education" | "skills", startIndex: number, endIndex: number) => void;
   loadResume: (data: ResumeData) => void;
   resetResume: () => void;
 }
@@ -274,6 +284,12 @@ export function ResumeProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const reorderItems = useCallback(
+    (section: "experience" | "projects" | "education" | "skills", startIndex: number, endIndex: number) =>
+      dispatch({ type: "REORDER_ITEMS", section, startIndex, endIndex }),
+    []
+  );
+
   const loadResume = useCallback(
     (resumeData: ResumeData) => dispatch({ type: "LOAD_RESUME", payload: resumeData }),
     []
@@ -302,6 +318,7 @@ export function ResumeProvider({ children }: { children: React.ReactNode }) {
         updateSkillCategory,
         addSkillCategory,
         removeSkillCategory,
+        reorderItems,
         loadResume,
         resetResume,
       }}
