@@ -31,21 +31,22 @@ type CoverView = "edit" | "preview";
 type TabId = "personal" | "experience" | "projects" | "education" | "skills" | "preview" | "ats";
 
 const DESKTOP_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
-  { id: "personal", label: "Personal" },
-  { id: "experience", label: "Experience" },
-  { id: "projects", label: "Projects" },
-  { id: "education", label: "Education" },
-  { id: "skills", label: "Skills" },
-  { id: "ats", label: "ATS Matcher", icon: <Target className="h-4 w-4" /> },
+  { id: "personal", label: "Personal", icon: <User className="h-3.5 w-3.5" /> },
+  { id: "experience", label: "Experience", icon: <Briefcase className="h-3.5 w-3.5" /> },
+  { id: "projects", label: "Projects", icon: <FolderKanban className="h-3.5 w-3.5" /> },
+  { id: "education", label: "Education", icon: <GraduationCap className="h-3.5 w-3.5" /> },
+  { id: "skills", label: "Skills", icon: <Wrench className="h-3.5 w-3.5" /> },
+  { id: "ats", label: "ATS Matcher", icon: <Target className="h-3.5 w-3.5" /> },
 ];
 
 const MOBILE_TABS: { id: TabId; label: string; icon?: React.ReactNode }[] = [
-  { id: "personal", label: "Personal" },
-  { id: "experience", label: "Experience" },
-  { id: "projects", label: "Projects" },
-  { id: "education", label: "Education" },
-  { id: "skills", label: "Skills" },
-  { id: "preview", label: "Preview", icon: <Eye className="h-4 w-4" /> },
+  { id: "personal", label: "Personal", icon: <User className="h-3.5 w-3.5" /> },
+  { id: "experience", label: "Experience", icon: <Briefcase className="h-3.5 w-3.5" /> },
+  { id: "projects", label: "Projects", icon: <FolderKanban className="h-3.5 w-3.5" /> },
+  { id: "education", label: "Education", icon: <GraduationCap className="h-3.5 w-3.5" /> },
+  { id: "skills", label: "Skills", icon: <Wrench className="h-3.5 w-3.5" /> },
+  { id: "ats", label: "ATS Matcher", icon: <Target className="h-3.5 w-3.5" /> },
+  { id: "preview", label: "Preview", icon: <Eye className="h-3.5 w-3.5" /> },
 ];
 
 const A4_WIDTH_PX = 794;
@@ -124,12 +125,12 @@ function ResumeBuilderInner() {
     <div className="flex items-center gap-3 self-start print:hidden rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800 mb-4 w-full md:w-auto md:mb-0 justify-between md:justify-start">
       <div className="flex items-center gap-2 flex-1 md:flex-none">
         <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Font</span>
-        <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{FONTS.map(f => <option key={f.value} value={f.value} style={{ color: "#000", backgroundColor: "#fff" }}>{f.label}</option>)}</select>
+        <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{FONTS.map(f => <option key={f.value} value={f.value} style={{ color: "#000", backgroundColor: "#fff" }}>{f.label}</option>)}</select>
       </div>
       <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 hidden md:block" />
       <div className="flex items-center gap-2 flex-1 md:flex-none">
         <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Color</span>
-        <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{COLORS.map(c => <option key={c.value} value={c.value} style={{ color: "#000", backgroundColor: "#fff" }}>{c.label}</option>)}</select>
+        <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{COLORS.map(c => <option key={c.value} value={c.value} style={{ color: "#000", backgroundColor: "#fff" }}>{c.label}</option>)}</select>
       </div>
     </div>
   );
@@ -192,6 +193,15 @@ function ResumeBuilderInner() {
   useEffect(() => { if (isCov && coverView === "preview" && isMobile) { upCover(); const t = setTimeout(upCover, 100); window.addEventListener("resize", upCover); return () => { clearTimeout(t); window.removeEventListener("resize", upCover); }; } }, [isCov, coverView, isMobile, upCover]);
   useEffect(() => { if (isInt && coverView === "preview" && isMobile) { upInt(); const t = setTimeout(upInt, 100); window.addEventListener("resize", upInt); return () => { clearTimeout(t); window.removeEventListener("resize", upInt); }; } }, [isInt, coverView, isMobile, upInt]);
 
+  useEffect(() => {
+    if (isRes) {
+      const el = document.getElementById(`subtab-${activeTab}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }
+  }, [activeTab, isRes]);
+
   if (!hasMounted) return null;
 
   const resumeEl = <ResumePreview themeFont={themeFont} themeAccent={themeAccent} />;
@@ -204,15 +214,15 @@ function ResumeBuilderInner() {
     if (isRes && isAts) {
       return (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
-          <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400"><Target className="h-4 w-4" />ATS Matcher</div>
+          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-950/20 space-y-3">
             <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
             <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
             {atsResult && (
               <div className="space-y-2 pt-1">
                 <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>
                 {atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}
-                {atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}
+                {atsResult.quickTip && <p className="text-[11px] text-blue-700 dark:text-blue-400">{atsResult.quickTip}</p>}
               </div>
             )}
           </div>
@@ -235,18 +245,10 @@ function ResumeBuilderInner() {
           {activeTab === "education" && <EducationSection />}
           {activeTab === "skills" && <SkillsSection />}
           {isPrev && isMobile && (
-            <>
               <div className="flex flex-col pt-2">
                 {renderThemeSelector()}
                 <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-hidden w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
               </div>
-              <div className="mt-4 p-3 rounded-xl border border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-950/20 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400"><Target className="h-4 w-4" />ATS Matcher</div>
-                <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
-                <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
-                {atsResult && (<div className="space-y-2 pt-1"><div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>{atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}{atsResult.quickTip && <p className="text-[11px] text-purple-700 dark:text-purple-400">{atsResult.quickTip}</p>}</div>)}
-              </div>
-            </>
           )}
         </>
       );
@@ -305,19 +307,19 @@ function ResumeBuilderInner() {
       {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><p className="text-xs text-zinc-500">Paste raw resume text below</p><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-95 transition-all duration-200" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
         <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
-          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-indigo-600 dark:text-indigo-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-indigo-600 hover:bg-indigo-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>
+          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>
           <div className="shrink-0 px-4 md:px-5 py-3 border-b border-zinc-100 dark:border-zinc-800/50">
             <nav className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
-              <button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isRes ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-4 w-4" />Resume</button>
-              <button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isCov ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><Mail className="h-4 w-4" />Cover Letter</button>
-              <button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isInt ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><MessageSquare className="h-4 w-4" />Interview</button>
+              <button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`whitespace-nowrap flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isRes ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-4 w-4" />Resume</button>
+              <button onClick={() => { setBuilderMode("cover-letter"); setCoverView("edit"); }} className={`whitespace-nowrap flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isCov ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><Mail className="h-4 w-4" />Cover Letter</button>
+              <button onClick={() => { setBuilderMode("interview"); setCoverView("edit"); }} className={`whitespace-nowrap flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isInt ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><MessageSquare className="h-4 w-4" />Interview</button>
             </nav>
           </div>
           {isRes && (
-            <div className="shrink-0 px-4 md:px-5 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar">
+            <div className="shrink-0 px-4 md:px-5 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50 overflow-x-auto no-scrollbar scroll-smooth">
               <nav className="flex gap-1.5">
                 {tabs.map(t => (
-                  <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-full transition-all duration-200 ${activeTab === t.id ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "bg-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300"}`}>
+                  <button id={`subtab-${t.id}`} key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-full transition-all duration-200 whitespace-nowrap ${activeTab === t.id ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300"}`}>
                     {"icon" in t && t.icon ? <>{t.icon} </> : null}<span>{t.label}</span>
                   </button>
                 ))}
@@ -327,8 +329,8 @@ function ResumeBuilderInner() {
           {(isCov || isInt) && isMobile && (
             <div className="shrink-0 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50">
               <nav className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
-                <button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium rounded-lg transition-all duration-200 ${isEdit ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-3.5 w-3.5" />Edit</button>
-                <button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium rounded-lg transition-all duration-200 ${!isEdit ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><Eye className="h-3.5 w-3.5" />Preview</button>
+                <button onClick={() => setCoverView("edit")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium rounded-lg transition-all duration-200 ${isEdit ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-3.5 w-3.5" />Edit</button>
+                <button onClick={() => setCoverView("preview")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium rounded-lg transition-all duration-200 ${!isEdit ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><Eye className="h-3.5 w-3.5" />Preview</button>
               </nav>
             </div>
           )}

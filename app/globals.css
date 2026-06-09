@@ -24,6 +24,18 @@
   --color-popover-foreground: hsl(240, 10%, 3.9%);
   --color-card: hsl(0, 0%, 100%);
   --color-card-foreground: hsl(240, 10%, 3.9%);
+  
+  --color-blue-50: #eef4ff;
+  --color-blue-100: #e0ecff;
+  --color-blue-200: #c7dbff;
+  --color-blue-300: #a3c4ff;
+  --color-blue-400: #7aa5ff;
+  --color-blue-500: #4d80ff;
+  --color-blue-600: #0F52BA;
+  --color-blue-700: #0b3d8c;
+  --color-blue-800: #082d69;
+  --color-blue-900: #051e47;
+  --color-blue-950: #031026;
 }
 
 :root {
