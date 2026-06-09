@@ -98,6 +98,14 @@ export const EMPTY_SKILL_CATEGORY: SkillCategory = {
   skills: "",
 };
 
+export const EMPTY_RESUME_DATA: ResumeData = {
+  personalInfo: EMPTY_PERSONAL_INFO,
+  experience: [],
+  projects: [],
+  education: [],
+  skills: [],
+};
+
 export const DEFAULT_RESUME_DATA: ResumeData = {
   personalInfo: {
     fullName: "Alexandra Sterling",

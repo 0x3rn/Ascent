@@ -11,6 +11,7 @@ import type {
 } from "@/lib/resume-types";
 import {
   DEFAULT_RESUME_DATA,
+  EMPTY_PERSONAL_INFO,
   EMPTY_EXPERIENCE,
   EMPTY_PROJECT,
   EMPTY_EDUCATION,
@@ -142,7 +143,13 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
       return action.payload;
 
     case "RESET_RESUME":
-      return DEFAULT_RESUME_DATA;
+      return {
+        personalInfo: { ...EMPTY_PERSONAL_INFO },
+        experience: [],
+        projects: [],
+        education: [],
+        skills: [],
+      };
 
     default:
       return state;
