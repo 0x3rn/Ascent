@@ -3,7 +3,7 @@
 import React from "react";
 import { useResume } from "@/lib/resume-context";
 import { marked } from "marked";
-import { Mail, Phone, MapPin, Globe, Link } from "lucide-react";
+import { Mail, Phone, MapPin, Globe, Link, Linkedin } from "lucide-react";
 
 interface ResumePreviewProps {
   themeFont?: string;
@@ -74,19 +74,19 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
             {personalInfo.email && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Mail className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.email}</span></div>)}
             {personalInfo.phone && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Phone className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.phone}</span></div>)}
             {personalInfo.location && (<div className="flex items-center gap-1.5 whitespace-nowrap"><MapPin className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.location}</span></div>)}
-            {personalInfo.linkedin && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Link className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.linkedin}</span></div>)}
+            {personalInfo.linkedin && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Linkedin className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.linkedin}</span></div>)}
             {(personalInfo as any).github && (<div className="flex items-center gap-1.5 whitespace-nowrap"><GithubIcon className="w-3 h-3 flex-shrink-0" /><span>{(personalInfo as any).github}</span></div>)}
             {personalInfo.website && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Globe className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.website}</span></div>)}
           </div>
         </header>
         {personalInfo.summary && (
-          <section className="mb-2.5 print:pt-[10mm] print:break-inside-avoid">
+          <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Professional Summary</h2>
             <MarkdownContent text={personalInfo.summary} />
           </section>
         )}
         {experience.length > 0 && (
-          <section className="mb-2.5 print:pt-[10mm] print:break-inside-avoid">
+          <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Professional Experience</h2>
             {experience.map((exp) => (
               <div key={exp.id} className="mb-2 print:break-inside-avoid">
@@ -110,19 +110,19 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
           </section>
         )}
         {projects.length > 0 && (
-          <section className="mb-2.5 print:pt-[10mm] print:break-inside-avoid">
+          <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Project{projects.length !== 1 ? "s" : ""}</h2>
             {projects.map((proj) => (<div key={proj.id} className="mb-2 print:break-inside-avoid"><div className="flex justify-between items-baseline gap-2"><h3 className="text-[11.5pt] font-semibold leading-snug text-zinc-900">{proj.name || "Project Name"}</h3>{proj.link && <span className="text-[9pt] text-zinc-500 whitespace-nowrap shrink-0">{proj.link}</span>}</div>{proj.skills && <p className="text-[9pt] italic text-zinc-600 mt-0.5">{proj.skills}</p>}{proj.bullets && (<div className="mt-0.5 ml-0"><BulletList text={proj.bullets} /></div>)}</div>))}
           </section>
         )}
         {education.length > 0 && (
-          <section className="mb-2.5 print:pt-[10mm] print:break-inside-avoid">
+          <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Education</h2>
             {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-1 print:break-inside-avoid"><div><h3 className="text-[11.5pt] font-semibold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[10.5pt] leading-[1.4] text-zinc-600">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> &mdash; GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> &ndash; </span>}{edu.endDate}</div></div>))}
           </section>
         )}
         {skills.length > 0 && (
-          <section className="print:pt-[10mm] print:break-inside-avoid">
+          <section className="print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid" style={{ borderColor: accentColor, color: accentColor }}>Skills</h2>
             {skills.map((sk) => (<div key={sk.id} className="mb-1"><p className="text-[10.5pt] leading-[1.4] text-zinc-900"><span className="font-semibold">{sk.category}: </span><span className="text-zinc-700">{sk.skills}</span></p></div>))}
           </section>
