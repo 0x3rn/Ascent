@@ -83,8 +83,12 @@
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
+@page {
+  margin: 0mm;
+  size: A4;
+}
+
 @media print {
-  @page { margin: 16mm 18mm; size: A4; }
   html, body { margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
