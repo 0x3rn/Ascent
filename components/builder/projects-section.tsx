@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { AiMagicButton } from "@/components/builder/ai-magic-button";
 import { enhanceBulletPoint, fixGrammar } from "@/app/actions/resume-ai";
 import { Plus, Trash2, GripVertical } from "lucide-react";
+import { useTurnstile } from "@/components/turnstile-provider";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 export function ProjectsSection() {
   const { data, updateProject, addProject, removeProject, reorderItems } = useResume();
+  const { turnstileToken } = useTurnstile();
   const { projects } = data;
 
   const onDragEnd = (result: DropResult) => {
@@ -56,8 +58,8 @@ export function ProjectsSection() {
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-zinc-500">Bullet Points<span className="ml-1 text-zinc-400 font-normal">(one per line, Markdown supported)</span></label>
                         <div className="flex items-center gap-1 flex-nowrap">
-                          <AiMagicButton onClick={() => fixGrammar(proj.bullets)} onResult={(text) => updateProject(proj.id, { bullets: text })} label="Fix Grammar" className="text-[10px] px-1.5 h-7" />
-                          <AiMagicButton onClick={() => enhanceBulletPoint(proj.bullets)} onResult={(text) => updateProject(proj.id, { bullets: text })} label="Enhance" className="text-[10px] px-1.5 h-7" />
+                          <AiMagicButton onClick={() => fixGrammar(proj.bullets, turnstileToken || undefined)} onResult={(text) => updateProject(proj.id, { bullets: text })} label="Fix Grammar" className="text-[10px] px-1.5 h-7" />
+                          <AiMagicButton onClick={() => enhanceBulletPoint(proj.bullets, turnstileToken || undefined)} onResult={(text) => updateProject(proj.id, { bullets: text })} label="Enhance" className="text-[10px] px-1.5 h-7" />
                         </div>
                         <Textarea value={proj.bullets} onChange={(e) => updateProject(proj.id, { bullets: e.target.value })} placeholder="- Built a real-time analytics dashboard...&#10;- Reduced query latency by X%..." className="min-h-[100px] text-sm leading-relaxed font-mono" />
                       </div>

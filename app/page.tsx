@@ -12,11 +12,13 @@ import { ExperienceSection } from "@/components/builder/experience-section";
 import { ProjectsSection } from "@/components/builder/projects-section";
 import { EducationSection } from "@/components/builder/education-section";
 import { SkillsSection } from "@/components/builder/skills-section";
+import { AtsPreview } from "@/components/preview/ats-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  parseRawResume, generateCoverLetter, generateInterviewPrep, scoreATS, shortenCoverLetter
+  parseRawResume, generateCoverLetter, generateInterviewPrep, scoreATS, shortenCoverLetter,
+  initMockInterview, chatMockInterview, generateMockInterviewReport
 } from "@/app/actions/resume-ai";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -25,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTurnstile } from "@/components/turnstile-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +43,8 @@ import {
 import {
   FileText, Download, ExternalLink, User, Briefcase, FolderKanban,
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
-  Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload
+  Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload,
+  Send, History, Play, StopCircle, ArrowRight
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -118,6 +122,14 @@ function ResumeBuilderInner() {
   const [intGenerating, setIntGenerating] = useState(false);
   const [intCopied, setIntCopied] = useState(false);
 
+  const [intMode, setIntMode] = useState<"prep" | "mock" | "dashboard">("prep");
+  const [mockMessages, setMockMessages] = useState<{ role: "user" | "ai", content: string, feedback?: string }[]>([]);
+  const [mockStatus, setMockStatus] = useState<"setup" | "running" | "completed">("setup");
+  const [mockInput, setMockInput] = useState("");
+  const [mockLoading, setMockLoading] = useState(false);
+  const [mockReport, setMockReport] = useState<any>(null);
+  const [dashboardHistory, setDashboardHistory] = useState<any[]>([]);
+
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteRaw, setPasteRaw] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
@@ -136,8 +148,42 @@ function ResumeBuilderInner() {
   const previewWrapperRef = useRef<HTMLDivElement>(null);
   const coverPreviewWrapperRef = useRef<HTMLDivElement>(null);
   const intPreviewWrapperRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setTimeout(() => setHasMounted(true), 0); const check = () => setIsMobile(window.innerWidth < 768); check(); window.addEventListener("resize", check); return () => window.removeEventListener("resize", check); }, []);
+  const { turnstileToken, handleUnauthorized, setSessionVerified } = useTurnstile();
+
+  useEffect(() => { 
+    setTimeout(() => setHasMounted(true), 0); 
+    const check = () => setIsMobile(window.innerWidth < 768); 
+    check(); 
+    window.addEventListener("resize", check); 
+    
+    // Load dashboard history
+    try {
+      const stored = localStorage.getItem("ascent_interview_history");
+      if (stored) setDashboardHistory(JSON.parse(stored));
+      
+      const storedAts = localStorage.getItem("ascent_ats_result");
+      if (storedAts) setAtsResult(JSON.parse(storedAts));
+      
+      const storedAtsRole = localStorage.getItem("ascent_ats_role");
+      if (storedAtsRole) setAtsRole(storedAtsRole);
+      
+      const storedAtsCompany = localStorage.getItem("ascent_ats_company");
+      if (storedAtsCompany) setAtsCompany(storedAtsCompany);
+      
+      const storedAtsJD = localStorage.getItem("ascent_ats_jd");
+      if (storedAtsJD) setAtsJD(storedAtsJD);
+    } catch {}
+
+    return () => window.removeEventListener("resize", check); 
+  }, []);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [mockMessages, mockLoading]);
 
   const firstName = (data.personalInfo.fullName || "My").trim().split(/\s+/)[0] || "My";
   const pdfTitle = `${firstName} Resume`;
@@ -165,9 +211,9 @@ function ResumeBuilderInner() {
 
   const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { } };
   const handleDelete = () => { setCoverBody(""); setCoverTargetRole(""); setCoverCompanyName(""); setCoverUserName(""); setCoverSkills([]); };
-  const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody)); } catch { } finally { setShortening(false); } };
-  const handleCoverGenerate = (body: string, tRole: string, cName: string, uName: string, sk: string[], ud: boolean = false) => { setCoverBody(body); setCoverTargetRole(tRole); setCoverCompanyName(cName); setCoverUserName(uName); setCoverSkills(sk); setCoverUseResumeData(ud); if (isMobile) setCoverView("preview"); };
-  const handleRegenerate = async () => { if (!coverTargetRole || !coverCompanyName || !coverUserName) return; setRegenerating(true); try { setCoverBody(await generateCoverLetter(coverUserName, coverTargetRole, coverCompanyName, coverSkills, "")); } catch { } finally { setRegenerating(false); } };
+  const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody, turnstileToken || undefined)); setSessionVerified(); } catch(e:any) { handleUnauthorized(e); } finally { setShortening(false); } };
+  const handleCoverGenerate = (body: string, tRole: string, cName: string, uName: string, sk: string[], ud: boolean = false) => { setCoverBody(body); setCoverTargetRole(tRole); setCoverCompanyName(cName); setCoverUserName(uName); setCoverSkills(sk); setCoverUseResumeData(ud); };
+  const handleRegenerate = async () => { if (!coverTargetRole || !coverCompanyName || !coverUserName) return; setRegenerating(true); try { setCoverBody(await generateCoverLetter(coverUserName, coverTargetRole, coverCompanyName, coverSkills, "", turnstileToken || undefined)); setSessionVerified(); } catch(e:any) { handleUnauthorized(e); } finally { setRegenerating(false); } };
   const handlePaste = async () => {
     if (!pasteRaw.trim()) return;
     setPasteLoading(true);
@@ -206,31 +252,333 @@ function ResumeBuilderInner() {
       }
       
       dispatchers.loadResume(newData);
+      setSessionVerified();
       setPasteOpen(false);
       setPasteRaw("");
-    } catch (e) {
-      alert("Failed to parse. Please try again.");
+      if (isMobile) setActiveTab("preview");
+    } catch (e: any) {
+      handleUnauthorized(e);
     } finally {
       setPasteLoading(false);
     }
   };
 
-  /* 
-  // PDF Upload feature temporarily disabled
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // ...
+  const handleATSScan = async () => { 
+    if (!atsJD.trim()) return; 
+    setAtsLoading(true); 
+    setAtsResult(null); 
+    try { 
+      const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience.map(e => ({ role: e.role, company: e.company, description: e.bullets })), Projects: data.projects.map(p => ({ name: p.name, skills: p.skills, description: p.bullets })), Skills: data.skills.map(s => ({ category: s.category, skills: s.skills })) }); 
+      const fullJD = `Role: ${atsRole}\nCompany: ${atsCompany}\n\nDescription:\n${atsJD}`; 
+      const result = JSON.parse(await scoreATS(bg, fullJD, turnstileToken || undefined));
+      setAtsResult(result); 
+      setSessionVerified(); 
+      
+      localStorage.setItem("ascent_ats_result", JSON.stringify(result));
+      localStorage.setItem("ascent_ats_role", atsRole);
+      localStorage.setItem("ascent_ats_company", atsCompany);
+      localStorage.setItem("ascent_ats_jd", atsJD);
+    } catch(e:any) { 
+      handleUnauthorized(e); 
+      setAtsResult(null); 
+    } finally { 
+      setAtsLoading(false); 
+    } 
   };
-  */
+  
+  const handleClearATS = () => {
+    setAtsResult(null);
+    setAtsRole("");
+    setAtsCompany("");
+    setAtsJD("");
+    localStorage.removeItem("ascent_ats_result");
+    localStorage.removeItem("ascent_ats_role");
+    localStorage.removeItem("ascent_ats_company");
+    localStorage.removeItem("ascent_ats_jd");
+  };
 
-  const handleATSScan = async () => { if (!atsJD.trim()) return; setAtsLoading(true); setAtsResult(null); try { const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience.map(e => ({ role: e.role, company: e.company, description: e.bullets })), Projects: data.projects.map(p => ({ name: p.name, skills: p.skills, description: p.bullets })), Skills: data.skills.map(s => ({ category: s.category, skills: s.skills })) }); const fullJD = `Role: ${atsRole}\nCompany: ${atsCompany}\n\nDescription:\n${atsJD}`; setAtsResult(JSON.parse(await scoreATS(bg, fullJD))); } catch { setAtsResult(null); } finally { setAtsLoading(false); } };
+  const handleStartMock = async () => {
+    if (!intRole.trim() || !intCompany.trim()) return;
+    setMockStatus("running");
+    setMockLoading(true);
+    setMockMessages([]);
+    setMockReport(null);
+    try {
+      const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
+      const res = await initMockInterview(bg, intRole, intCompany, turnstileToken || undefined);
+      if (res?.success) {
+        setMockMessages([
+          { role: "ai", content: res.overviewMarkdown },
+          { role: "ai", content: res.firstQuestion }
+        ]);
+        setSessionVerified();
+      } else {
+        alert("Failed to start mock interview.");
+        setMockStatus("setup");
+      }
+    } catch (e: any) {
+      handleUnauthorized(e);
+      setMockStatus("setup");
+    } finally {
+      setMockLoading(false);
+    }
+  };
+
+  const handleSendMock = async () => {
+    if (!mockInput.trim() || mockLoading) return;
+    const answer = mockInput.trim();
+    setMockInput("");
+    const newMsgs = [...mockMessages, { role: "user" as const, content: answer }];
+    setMockMessages(newMsgs);
+    setMockLoading(true);
+    
+    try {
+      const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
+      const res = await chatMockInterview(newMsgs, answer, bg, intRole, intCompany, turnstileToken || undefined);
+      if (res?.success) {
+        const updatedMsgs = [...newMsgs];
+        updatedMsgs[updatedMsgs.length - 1].feedback = res.feedbackMarkdown;
+        setSessionVerified();
+        
+        if (res.isInterviewComplete) {
+          setMockMessages(updatedMsgs);
+          handleFinishMock(updatedMsgs);
+        } else {
+          updatedMsgs.push({ role: "ai", content: res.nextQuestion });
+          setMockMessages(updatedMsgs);
+        }
+      }
+    } catch (e: any) {
+      handleUnauthorized(e);
+    } finally {
+      setMockLoading(false);
+    }
+  };
+
+  const handleFinishMock = async (currentMsgs: any[]) => {
+    setMockLoading(true);
+    try {
+      const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
+      const res = await generateMockInterviewReport(currentMsgs, bg, intRole, intCompany, turnstileToken || undefined);
+      if (res?.success) {
+        setMockReport(res);
+        setMockStatus("completed");
+        
+        const newRecord = {
+          date: new Date().toISOString(),
+          role: intRole,
+          company: intCompany,
+          score: res.overallScore,
+          report: res
+        };
+        const updatedHistory = [newRecord, ...dashboardHistory];
+        setDashboardHistory(updatedHistory);
+        localStorage.setItem("ascent_interview_history", JSON.stringify(updatedHistory));
+        setSessionVerified();
+      }
+    } catch (e: any) {
+      handleUnauthorized(e);
+    } finally {
+      setMockLoading(false);
+    }
+  };
+
+  const handleClearMock = () => {
+    setMockStatus("setup");
+    setMockMessages([]);
+    setMockReport(null);
+    setMockInput("");
+  };
+
+  const renderMockInterview = () => {
+    if (mockStatus === "setup") {
+      return (
+        <div className="space-y-4">
+          <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Live Mock Interview Setup</div>
+          <div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3">
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div>
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div>
+            <Button onClick={handleStartMock} disabled={mockLoading || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{mockLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}{mockLoading ? "Initializing..." : "Start Mock Interview"}</Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between mb-3 shrink-0">
+          <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${mockStatus === 'running' ? 'bg-green-500 animate-pulse' : 'bg-zinc-400'}`} /> {mockStatus === "running" ? "Mock Interview in Progress" : "Interview Complete"}
+          </div>
+          <div className="flex gap-2">
+            {mockStatus === "running" && (
+              <Button onClick={() => handleFinishMock(mockMessages)} disabled={mockLoading} variant="outline" size="sm" className="h-7 text-[10px] text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20"><StopCircle className="h-3 w-3 mr-1" /> End Early</Button>
+            )}
+            {mockStatus === "completed" && (
+              <Button onClick={handleClearMock} variant="outline" size="sm" className="h-7 text-[10px]"><RotateCw className="h-3 w-3 mr-1" /> Start New Mock</Button>
+            )}
+          </div>
+        </div>
+        
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-2 pb-4 scroll-smooth">
+          {mockMessages.map((msg, idx) => (
+            <div key={idx} className="flex flex-col gap-3">
+              <div className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${msg.role === "user" ? "bg-blue-600 text-white rounded-br-sm" : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-bl-sm"}`}>
+                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-snug prose-p:my-1" dangerouslySetInnerHTML={{ __html: require("marked").parse(msg.content) }} />
+                </div>
+              </div>
+              
+              {msg.feedback && (
+                <div className="w-full flex justify-center my-2">
+                  <Card className="w-[90%] border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm">
+                    <div className="p-3 text-xs prose prose-sm dark:prose-invert max-w-none prose-headings:text-sm prose-headings:font-bold prose-headings:mb-1 prose-p:leading-snug prose-p:my-1 text-blue-900 dark:text-blue-100" dangerouslySetInnerHTML={{ __html: require("marked").parse(msg.feedback) }} />
+                  </Card>
+                </div>
+              )}
+            </div>
+          ))}
+          {mockLoading && (
+            <div className="flex w-full justify-start">
+              <div className="max-w-[85%] rounded-2xl px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-bl-sm shadow-sm">
+                <div className="flex space-x-1.5 items-center h-5">
+                  <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></div>
+                </div>
+              </div>
+            </div>
+          )}
+          {mockStatus === "completed" && mockReport && (
+            <div className="w-full flex justify-center mt-6 mb-4">
+              <Card className="w-full border-green-200 dark:border-green-900/50 bg-green-50/30 dark:bg-green-900/10 shadow-sm overflow-hidden">
+                <div className="bg-green-100 dark:bg-green-900/30 p-3 border-b border-green-200 dark:border-green-900/50 flex items-center justify-between">
+                  <h3 className="font-bold text-green-800 dark:text-green-300">Interview Completed</h3>
+                  <div className="font-black text-xl text-green-700 dark:text-green-400">{mockReport.overallScore}%</div>
+                </div>
+                <div className="p-4 space-y-4 text-sm text-zinc-700 dark:text-zinc-300">
+                  <div>
+                    <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Category Scores</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {mockReport.categoryScores?.map((cs: any, i: number) => (
+                        <div key={i} className="flex flex-col justify-between bg-white dark:bg-zinc-900 p-2 rounded border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                          <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 break-words line-clamp-2">{cs.category}</span>
+                          <span className="font-bold text-blue-600 dark:text-blue-400 mt-1">{cs.score}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Study Plan</h4>
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-xs" dangerouslySetInnerHTML={{ __html: require("marked").parse(mockReport.studyPlanMarkdown || "") }} />
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+
+        {mockStatus === "running" && (
+          <div className="shrink-0 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="relative">
+              <Textarea 
+                value={mockInput} 
+                onChange={e => setMockInput(e.target.value)} 
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMock();
+                  }
+                }}
+                placeholder="Type your answer... (Press Enter to send)" 
+                className="pr-12 resize-none h-[80px] text-sm"
+                disabled={mockLoading}
+              />
+              <Button onClick={handleSendMock} disabled={!mockInput.trim() || mockLoading} size="icon" className="absolute right-2 bottom-2 h-8 w-8 bg-blue-600 hover:bg-blue-500 rounded-full text-white shadow-md">
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderMockDashboard = () => {
+    return (
+      <div className="space-y-4 h-full flex flex-col">
+        <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Mock Interview History</div>
+        {dashboardHistory.length === 0 ? (
+          <div className="p-8 text-center bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <History className="h-8 w-8 text-zinc-300 mx-auto mb-3" />
+            <p className="text-sm text-zinc-500 font-medium">No past interviews found.</p>
+            <p className="text-xs text-zinc-400 mt-1">Complete a Live Mock Interview to track your progress here.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 flex-1 overflow-y-auto pb-4">
+            {dashboardHistory.map((record, i) => (
+              <Accordion key={i} className="bg-white dark:bg-zinc-800/80 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden">
+                <AccordionItem value={`item-${i}`} className="border-0">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex flex-col items-start gap-1">
+                        <div className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 text-left">{record.role} <span className="text-zinc-400 font-normal">@ {record.company}</span></div>
+                        <div className="text-xs text-zinc-500">{new Date(record.date).toLocaleDateString()}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={record.score >= 80 ? "bg-green-100 text-green-700" : record.score >= 60 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}>
+                          {record.score}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4 pt-1">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        {record.report?.categoryScores?.map((cs: any, j: number) => (
+                          <div key={j} className="bg-zinc-50 dark:bg-zinc-950 p-2 rounded-lg border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between">
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 break-words line-clamp-2">{cs.category}</div>
+                            <div className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">{cs.score}%</div>
+                          </div>
+                        ))}
+                      </div>
+                      {record.report?.weakestAreas && record.report.weakestAreas.length > 0 && (
+                        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                           <h4 className="font-semibold text-blue-900 dark:text-blue-300 text-xs mb-2 uppercase tracking-wider">Top Weaknesses to Improve</h4>
+                           <ul className="list-disc pl-4 space-y-1">
+                             {record.report.weakestAreas.map((w: string, j: number) => (
+                               <li key={j} className="text-xs text-blue-800 dark:text-blue-200">{w}</li>
+                             ))}
+                           </ul>
+                        </div>
+                      )}
+                      {record.report?.idealAnswersMarkdown && (
+                        <div>
+                          <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs mb-2">Ideal Answers</h4>
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-xs bg-zinc-50 dark:bg-zinc-950 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800" dangerouslySetInnerHTML={{ __html: require("marked").parse(record.report.idealAnswersMarkdown) }} />
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   const handleIntGenerate = async () => {
     if (!intRole.trim() || !intCompany.trim()) return;
     setIntGenerating(true);
     try {
-      const bg = `Summary: ${data.personalInfo.summary}\nExperience: ${data.experience.map(e => `${e.role} at ${e.company}: ${e.bullets}`).join("\n")}\nSkills: ${data.skills.map(s => `${s.category}: ${s.skills}`).join("\n")}`;
-      setIntContent(await generateInterviewPrep(intRole, intCompany, bg));
-      if (isMobile) setCoverView("preview");
-    } catch { } finally {
+      const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
+      setIntContent(await generateInterviewPrep(intRole, intCompany, bg, turnstileToken || undefined));
+      setSessionVerified();
+    } catch (e: any) { 
+      handleUnauthorized(e);
+    } finally {
       setIntGenerating(false);
     }
   };
@@ -265,16 +613,26 @@ function ResumeBuilderInner() {
   if (!hasMounted) return null;
 
   const resumeEl = <ResumePreview themeFont={themeFont} themeAccent={themeAccent} />;
+  const atsEl = <AtsPreview atsResult={atsResult} atsRole={atsRole} atsCompany={atsCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const coverEl = <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} />;
-  const intEl = <InterviewPreview content={intContent} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
-  const ap = isRes ? resumeEl : isCov ? coverEl : intEl;
+  const intEl = <InterviewPreview content={intContent} mockReport={intMode === "mock" && mockStatus === "completed" ? mockReport : undefined} mockMessages={intMode === "mock" && mockStatus === "completed" ? mockMessages : undefined} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
+  const ap = isRes ? (isAts ? atsEl : resumeEl) : isCov ? coverEl : intEl;
 
   // ---- Left pane content (flat function, no IIFE) ----
   function renderLeftPane() {
     if (isRes && isAts) {
       return (
         <div className="space-y-4 pb-12">
-          <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400"><Target className="h-4 w-4" />Semantic Recruiter Engine</div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400">
+              <Target className="h-4 w-4" />Semantic Recruiter Engine
+            </div>
+            {atsResult && (
+              <Button onClick={handleClearATS} variant="ghost" size="sm" className="h-8 text-xs text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                <Trash2 className="h-3 w-3 mr-1.5" /> Clear Results
+              </Button>
+            )}
+          </div>
           
           <div className="p-4 rounded-xl border border-blue-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 shadow-sm space-y-4">
             <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role</label><Input value={atsRole} onChange={e => setAtsRole(e.target.value)} placeholder="e.g. Senior Frontend Engineer" className="h-9 text-sm" /></div>
@@ -300,7 +658,7 @@ function ResumeBuilderInner() {
           {atsResult && !atsLoading && (
             <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
               {/* Score Header */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { label: "Overall Match", val: atsResult.scores.compositeScore, primary: true },
                   { label: "ATS Compatibility", val: atsResult.scores.atsCompatibility },
@@ -350,12 +708,16 @@ function ResumeBuilderInner() {
               {/* Project Evaluation Section */}
               {atsResult.projectEvaluation && (
                 <div className="pt-2">
-                  <Card className="border-blue-100 dark:border-blue-900/50 shadow-sm overflow-hidden bg-white dark:bg-zinc-950">
-                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3.5 border-b border-blue-100 dark:border-blue-900/30 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold flex items-center gap-2 text-blue-800 dark:text-blue-300">
-                        <FolderKanban className="h-4 w-4" /> Project Alignment
+                  <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden bg-white dark:bg-zinc-950">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
+                        <FolderKanban className="h-4 w-4 text-zinc-500" /> Project Alignment
                       </h3>
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-semibold">{atsResult.projectEvaluation.matchStatus}</Badge>
+                      <Badge variant="outline" className={`font-semibold ${
+                        atsResult.projectEvaluation.matchStatus === "Strong Match" ? "bg-green-100 text-green-700 border-green-200 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300" :
+                        atsResult.projectEvaluation.matchStatus === "Partial Match" ? "bg-amber-100 text-amber-700 border-amber-200 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300" :
+                        "bg-red-100 text-red-700 border-red-200 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
+                      }`}>{atsResult.projectEvaluation.matchStatus}</Badge>
                     </div>
                     <div className="p-4">
                       <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{atsResult.projectEvaluation.feedback}</p>
@@ -417,8 +779,8 @@ function ResumeBuilderInner() {
                     {atsResult.actionableRewrites.map((rewrite, i) => (
                       <Card key={i} className="overflow-hidden shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
                         <div className="p-4 bg-white dark:bg-zinc-950 border-b border-zinc-200/60 dark:border-zinc-800/60">
-                          <span className="text-[10px] font-bold uppercase text-zinc-500 dark:text-zinc-400 mb-1.5 block tracking-wider">Original</span>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-through decoration-zinc-300 dark:decoration-zinc-700">{rewrite.originalText}</p>
+                          <span className="text-[10px] font-bold uppercase text-red-500/80 dark:text-red-400/80 mb-1.5 block tracking-wider">Original (Weak)</span>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-through decoration-red-500/70 dark:decoration-red-500/70 decoration-2 leading-relaxed">{rewrite.originalText}</p>
                         </div>
                         <div className="p-4 bg-white dark:bg-zinc-950">
                           <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-500 mb-2 flex items-center gap-1.5 tracking-wider"><Sparkles className="h-3 w-3" /> Suggested Refinement</span>
@@ -502,12 +864,29 @@ function ResumeBuilderInner() {
 
     if (isInt && (isEdit || !isMobile)) {
       return (
-        <div className="space-y-4">
-          <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Interview Prep Generator</div>
-          <div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3">
-            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div>
-            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div>
-            <Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button>
+        <div className="flex flex-col h-full">
+          {/* Sub Navigation */}
+          <div className="shrink-0 mb-4 bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl flex">
+            <button onClick={() => setIntMode("prep")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "prep" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-3.5 w-3.5" />Prep Guide</button>
+            <button onClick={() => setIntMode("mock")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "mock" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><MessageSquare className="h-3.5 w-3.5" />Live Mock</button>
+            <button onClick={() => setIntMode("dashboard")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "dashboard" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><History className="h-3.5 w-3.5" />Dashboard</button>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            {intMode === "prep" && (
+              <div className="space-y-4">
+                <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Interview Prep Generator</div>
+                <div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3">
+                  <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div>
+                  <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div>
+                  <Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button>
+                </div>
+              </div>
+            )}
+            
+            {intMode === "mock" && renderMockInterview()}
+            
+            {intMode === "dashboard" && renderMockDashboard()}
           </div>
         </div>
       );
@@ -564,7 +943,7 @@ function ResumeBuilderInner() {
           <div className="flex-1 overflow-y-auto p-3 md:p-5">{renderLeftPane()}</div>
           {/*<footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3"><p className="text-[10px] md:text-[11px] text-zinc-400 dark:text-zinc-500">Powered by DeepSeek AI</p><a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4" /></a></footer> */}
         </aside>
-        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{coverEl}</div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
+        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{coverEl}</div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
       </div>
     </>
   );

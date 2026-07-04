@@ -1,6 +1,47 @@
 "use server";
 
 import OpenAI from "openai";
+import { cookies } from "next/headers";
+
+async function verifyTurnstileSession(token?: string) {
+  const cookieStore = await cookies();
+  const sessionVerified = cookieStore.get("ascent_session_verified");
+
+  if (sessionVerified?.value === "true") {
+    return true;
+  }
+
+  if (!token) {
+    throw new Error("Unauthorized: Turnstile token required");
+  }
+
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("Server configuration error: Turnstile secret missing");
+  }
+
+  const formData = new URLSearchParams();
+  formData.append("secret", secretKey);
+  formData.append("response", token);
+
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: formData,
+  });
+
+  const outcome = await res.json();
+  if (outcome.success) {
+    cookieStore.set("ascent_session_verified", "true", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 3600,
+      path: "/",
+    });
+    return true;
+  }
+
+  throw new Error("Unauthorized: Turnstile verification failed");
+}
 
 function getClient() {
   const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -35,7 +76,8 @@ async function runDeepSeek(prompt: string, maxTokens: number = 2048): Promise<st
   return text.replace(/—/g, "-").replace(/\u2014/g, "-");
 }
 
-export async function enhanceBulletPoint(bulletText: string): Promise<string> {
+export async function enhanceBulletPoint(bulletText: string, turnstileToken?: string): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `Rewrite the following resume bullet point using strong action verbs, quantifiable metrics, and concise, impactful phrasing. Use the formula: [Action Verb] + [What Was Done] + [Measurable Result/Impact].
 
 If the input lacks metrics, infer reasonable ones based on the context.
@@ -48,8 +90,10 @@ Return ONLY the rewritten bullet point. Do not add bullet characters unless the 
 
 export async function tailorToJob(
   experienceBullets: string,
-  jobDescription: string
+  jobDescription: string,
+  turnstileToken?: string
 ): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `I have the following resume bullet points:
 
 """
@@ -68,7 +112,8 @@ Return ONLY the rewritten bullet points, maintaining the same bullet format (one
   return runDeepSeek(prompt);
 }
 
-export async function fixGrammar(bulletText: string): Promise<string> {
+export async function fixGrammar(bulletText: string, turnstileToken?: string): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `Fix any grammar, spelling, or punctuation issues in the following text. Improve sentence flow and clarity. Maintain the original tone and structure. Do not rewrite from scratch.
 
 Input: "${bulletText}"
@@ -77,7 +122,8 @@ Return ONLY the corrected text.`;
   return runDeepSeek(prompt);
 }
 
-export async function enhanceSummary(summary: string): Promise<string> {
+export async function enhanceSummary(summary: string, turnstileToken?: string): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `Rewrite the following professional summary to be more compelling, concise, and impactful. Keep it under 5 sentences.
 
 Input: "${summary}"
@@ -91,8 +137,10 @@ export async function generateCoverLetter(
   targetRole: string,
   companyName: string,
   skills: string[],
-  candidateBackground: string
+  candidateBackground: string,
+  turnstileToken?: string
 ): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const hasBackground = candidateBackground && candidateBackground.trim().length > 0;
   const skillsLine = skills && skills.length > 0
     ? `\nThe candidate has listed these relevant skills: ${skills.join(", ")}. Weave these skills seamlessly into the body paragraphs to demonstrate qualification. Make it sound natural and human.`
@@ -117,7 +165,8 @@ Return ONLY the raw cover letter body text (the paragraphs between the salutatio
   return runDeepSeek(prompt, 1024);
 }
 
-export async function shortenCoverLetter(currentText: string): Promise<string> {
+export async function shortenCoverLetter(currentText: string, turnstileToken?: string): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `You are an expert editor. Shorten this cover letter to a maximum of 2 highly impactful paragraphs (approx. 15 lines of text). Retain the exact same tone, structure, and key achievements. Do NOT add new information. Return ONLY the shortened letter.
 
 Cover letter:
@@ -132,7 +181,8 @@ Return ONLY the shortened cover letter body text. Each paragraph separated by a 
 }
 
 // ---- SMART PASTE ----
-export async function parseRawResume(rawText: string): Promise<string> {
+export async function parseRawResume(rawText: string, turnstileToken?: string): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `You are an expert data extractor. Extract the user's details from the following raw text (LinkedIn export, old resume, etc.) and return ONLY a strict JSON object matching this TypeScript schema. No markdown, no conversational text, no code fences.
 
 interface ResumeData {
@@ -189,8 +239,10 @@ Return ONLY the JSON object. No markdown code fences, no conversational text.`;
 // ---- ATS SCORING ----
 export async function scoreATS(
   resumeData: string,
-  jobDescription: string
+  jobDescription: string,
+  turnstileToken?: string
 ): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
   const prompt = `You are an elite Tech Recruiter and advanced ATS (Applicant Tracking System). Compare the candidate's resume against the target Job Description (JD). 
 
 Do NOT use exact-keyword matching. Use semantic equivalents (e.g., "Built payment infrastructure" matches "Payment processing").
@@ -256,31 +308,322 @@ Return ONLY the JSON object.`;
 export async function generateInterviewPrep(
   targetRole: string,
   companyName: string,
-  candidateBackground: string
+  candidateBackground: string,
+  turnstileToken?: string
 ): Promise<string> {
-  const prompt = `You are an expert interview coach. Generate 10 specific behavioral/technical interview questions that a ${targetRole} candidate would face at ${companyName}. For each question, provide a STAR method answer outline drawing from their exact experience.
+  await verifyTurnstileSession(turnstileToken);
+  const prompt = `You are an experienced hiring manager, recruiter, and interview coach.
 
-Here is the candidate's background:
+Generate a comprehensive interview preparation guide tailored specifically to the supplied job description and candidate resume.
+
+Your objective is to maximize the candidate's interview performance.
+
+---
+
+Input
+
+Resume:
 """
 ${candidateBackground}
 """
 
-Format your response in Markdown:
-## Interview Preparation for ${targetRole} at ${companyName}
+Target Role / Job Description:
+${targetRole}
 
-### Question 1: [Type - Behavioral/Technical]
-**Question:** [The question]
-**STAR Answer Outline:**
-- **S**ituation: [context from their experience]
-- **T**ask: [what needed to be done]
-- **A**ction: [specific steps they should mention]
-- **R**esult: [quantifiable outcome]
+Company Name:
+${companyName}
 
-(Repeat for questions 2-10)
+---
 
-CRITICAL: Do NOT use em-dashes. Return ONLY the formatted guide. No conversational filler.`;
+Step 1
 
-  return runDeepSeek(prompt, 2048);
+Analyze the job description.
+
+Identify:
+
+- required skills
+- preferred skills
+- responsibilities
+- likely interview focus
+- technical concepts
+- behavioral expectations
+
+---
+
+Step 2
+
+Analyze the resume.
+
+Identify:
+
+- strongest experiences
+- strongest projects
+- achievements
+- leadership
+- technical depth
+
+Identify any potential weaknesses or gaps.
+
+---
+
+Step 3
+
+Generate interview preparation.
+
+Include:
+
+## Company Research
+
+Explain:
+
+- what the company does
+- products
+- customers
+- competitors
+- recent trends if known
+
+---
+
+## Resume Deep Dive
+
+Predict what interviewers will ask about each experience.
+
+---
+
+## Technical Questions
+
+Generate questions that directly relate to the resume.
+
+Do not ask questions about technologies absent from the resume unless the job strongly requires them.
+
+---
+
+## Behavioral Questions
+
+Generate STAR-style behavioral questions.
+
+Examples:
+
+Tell me about a disagreement.
+
+Tell me about a failure.
+
+Tell me about a production incident.
+
+Tell me about a difficult stakeholder.
+
+---
+
+## System Design
+
+If appropriate.
+
+Generate realistic design questions.
+
+Scale based on experience level.
+
+---
+
+## Coding Topics
+
+Identify the most likely coding interview topics.
+
+Prioritize:
+
+- arrays
+- strings
+- trees
+- graphs
+- concurrency
+- SQL
+- APIs
+
+according to the role.
+
+---
+
+## Company-specific Questions
+
+Predict likely company-specific questions.
+
+For example:
+
+Stripe:
+Payments
+Distributed systems
+Reliability
+APIs
+
+Google:
+Algorithms
+Scalability
+
+Meta:
+Product thinking
+
+Amazon:
+Leadership Principles
+
+---
+
+## Candidate Weaknesses
+
+Identify:
+
+- weak resume areas
+- missing technologies
+- unclear achievements
+
+Suggest how to answer honestly.
+
+Never recommend lying.
+
+---
+
+## Questions to Ask the Interviewer
+
+Generate 10 thoughtful questions.
+
+---
+
+## Final Advice
+
+Provide:
+
+Top strengths
+
+Top risks
+
+Last-minute preparation checklist
+
+---
+
+Writing Style
+
+Detailed
+
+Supportive
+
+Actionable
+
+Specific
+
+Professional
+
+CRITICAL: Return Markdown format only. No conversational filler or wrapping text.`;
+
+  return runDeepSeek(prompt, 3000);
 }
 
 
+// ---- MOCK INTERVIEW ACTIONS ----
+
+export async function initMockInterview(resumeData: string, targetRole: string, companyName: string, turnstileToken?: string): Promise<any> {
+  await verifyTurnstileSession(turnstileToken);
+  const prompt = `You are an elite Interviewer. We are starting a mock interview.
+Target Role: ${targetRole}
+Company: ${companyName}
+
+Candidate Resume:
+"""
+${resumeData}
+"""
+
+Task:
+1. Analyze the resume and job to form an interview plan (10 questions covering Intro, Resume Deep Dive, Technical, System Design, Behavioral, Company Fit).
+2. Generate an "Interview Overview" markdown summary.
+3. Ask the very first question (Introduction).
+
+CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
+{
+  "success": true,
+  "overviewMarkdown": "Markdown string containing estimated time, sections, and brief summary",
+  "firstQuestion": "The exact first question to ask the candidate"
+}`;
+
+  try {
+    const result = await runDeepSeek(prompt, 2048);
+    const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function chatMockInterview(chatHistory: any[], currentAnswer: string, resumeData: string, targetRole: string, companyName: string, turnstileToken?: string): Promise<any> {
+  await verifyTurnstileSession(turnstileToken);
+  const historyStr = JSON.stringify(chatHistory, null, 2);
+  
+  const prompt = `You are an elite Interviewer conducting a mock interview for a ${targetRole} at ${companyName}.
+You are currently evaluating the candidate's latest answer and deciding the next step.
+If the answer is weak, ask a follow-up. If it is strong, move to the next question category. Aim for a total of ~10 main questions.
+
+Candidate Resume:
+${resumeData}
+
+Chat History (Context):
+${historyStr}
+
+Candidate's Latest Answer:
+"${currentAnswer}"
+
+Task:
+1. Evaluate the answer (Score 1-10, Strengths, Weaknesses, Suggested Better Answer). Format this as Markdown.
+2. Determine if the interview should end (has it reached ~10 questions and natural conclusion?).
+3. If not ending, generate the next interview question.
+
+CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
+{
+  "success": true,
+  "feedbackMarkdown": "Markdown evaluation of the candidate's latest answer",
+  "nextQuestion": "The next question to ask (or empty if complete)",
+  "isInterviewComplete": boolean
+}`;
+
+  try {
+    const result = await runDeepSeek(prompt, 2048);
+    const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function generateMockInterviewReport(chatHistory: any[], resumeData: string, targetRole: string, companyName: string, turnstileToken?: string): Promise<any> {
+  await verifyTurnstileSession(turnstileToken);
+  const historyStr = JSON.stringify(chatHistory, null, 2);
+  
+  const prompt = `You are an elite Interviewer. The mock interview for ${targetRole} at ${companyName} has concluded.
+Generate the final comprehensive report based on the candidate's performance.
+
+Candidate Resume:
+${resumeData}
+
+Chat History:
+${historyStr}
+
+CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
+{
+  "success": true,
+  "overallScore": number,
+  "categoryScores": [
+    { "category": string, "score": number }
+  ],
+  "strongestAnswers": [
+    { "topic": string, "feedback": string }
+  ],
+  "weakestAreas": [
+    string
+  ],
+  "idealAnswersMarkdown": "Markdown containing ideal answers for key questions asked",
+  "studyPlanMarkdown": "Markdown personalized study plan"
+}`;
+
+  try {
+    const result = await runDeepSeek(prompt, 3000);
+    const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

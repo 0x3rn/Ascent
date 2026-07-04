@@ -20,11 +20,11 @@ A premium, production-ready career toolkit that combines live A4 previews with A
 - **Action Toolbar** — Copy Text, Shorten, Regenerate, Delete, and Download PDF
 - **Business Letter Format** — Date, recipient, salutation, body paragraphs, and sign-off in standard format
 
-### Interview Prep Generator
-- **Custom Questions** — Generate 5 tailored behavioral/technical interview questions with STAR answer outlines
-- **Resume-Contextual** — Questions draw from your actual experience, skills, and projects
-- **Markdown Preview** — Formatted Q&A guide in the A4 preview workspace
-- **Export Ready** — Copy to clipboard or download as PDF
+### Interview Builder
+- **Prep Guide Generator** — Generate tailored behavioral/technical interview questions with STAR answer outlines
+- **Live Mock Interview** — Interactive AI chatbot that conducts a realistic mock interview based on your background and target role
+- **Performance Report** — Get scored out of 100 on your mock interview with detailed feedback on your answers and areas for improvement
+- **Export Ready** — Copy to clipboard or download your entire interview transcript and report as a beautifully formatted PDF
 
 ### Theme & Customization
 - **Font Switcher** — Inter (Modern), Lora (Classic), Geist Mono (Tech) — affects all document previews
@@ -37,6 +37,10 @@ A premium, production-ready career toolkit that combines live A4 previews with A
 - **Safari Fixes** — Table print hack ensures consistent margins on every page, even when content flows to page 2+
 - **Mobile Parity** — Print output is identical whether on desktop or mobile (strict 210mm width enforced)
 - **Cross-Bleeding Prevention** — Only the active document prints; builder UI is hidden via `print:hidden`
+
+### Security
+- **Cloudflare Turnstile** — Enterprise-grade bot protection integrated across all AI endpoints
+- **Session Cookies** — Secure, seamless verification bypassing repeated CAPTCHAs during active sessions
 
 ## Tech Stack
 
@@ -68,7 +72,7 @@ npm install
 
 ### Environment Variables
 
-Copy the example env file and add your DeepSeek API key:
+Copy the example env file and add your keys:
 
 ```bash
 cp .env.local.example .env.local
@@ -78,6 +82,8 @@ Edit `.env.local`:
 
 ```
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-site-key-here
+TURNSTILE_SECRET_KEY=your-secret-key-here
 ```
 
 ### Development
@@ -120,12 +126,13 @@ npm start
 | Action | Description |
 |--------|-------------|
 | **Generate Prep Guide** | Creates 5 STAR-method behavioral/technical interview questions |
+| **Live Mock Interview** | Start an interactive AI chatbot that interviews you in real-time |
 
 ### Analysis
 
 | Action | Description |
 |--------|-------------|
-| **ATS Match** | Scores resume against job description (0-100), lists missing keywords, provides actionable tip |
+| **ATS Match** | Scores resume against job description (0-100), gives actionable bullet point rewrites, and skill gap analysis |
 
 ## Project Structure
 
