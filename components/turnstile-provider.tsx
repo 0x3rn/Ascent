@@ -22,14 +22,17 @@ export function TurnstileProvider({ children }: { children: ReactNode }) {
       setTurnstileToken(null);
       setIsSessionVerified(false);
       toast.error("Security Verification Required", {
-        description: "Your session has expired. Please complete the security check to continue."
+        description: e?.message || "Your session has expired. Please complete the security check to continue."
       });
     } else {
       toast.error("Error", { description: e?.message || "An unexpected error occurred." });
     }
   };
 
-  const setSessionVerified = () => setIsSessionVerified(true);
+  const setSessionVerified = () => {
+    setIsSessionVerified(true);
+    setTurnstileToken(null); // Clear the consumed token so it's never reused!
+  };
 
   return (
     <TurnstileContext.Provider value={{ turnstileToken: turnstileToken || undefined, isSessionVerified, handleUnauthorized, setSessionVerified }}>
@@ -43,16 +46,6 @@ export function TurnstileProvider({ children }: { children: ReactNode }) {
               setTimeout(() => {
                 setIsSessionVerified(true);
               }, 2000);
-            }}
-            onError={() => {
-              setTurnstileToken(null);
-              toast.error("Security check failed. Please try again.");
-            }}
-            onExpire={() => {
-              setTurnstileToken(null);
-              toast.error("Security check expired.", {
-                description: "Please complete the check again before your next action."
-              });
             }}
           />
         </div>

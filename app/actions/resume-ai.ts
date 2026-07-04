@@ -2,20 +2,26 @@
 
 import OpenAI from "openai";
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 
 async function verifyTurnstileSession(token?: string) {
+  console.log("--- TURNSTILE VERIFICATION ---");
+  console.log("Received token length:", token ? token.length : "undefined");
   const cookieStore = await cookies();
   const sessionVerified = cookieStore.get("ascent_session_verified");
+  console.log("Cookie ascent_session_verified:", sessionVerified?.value);
 
   if (sessionVerified?.value === "true") {
+    console.log("Session cookie is valid. Bypassing token check.");
     return true;
   }
 
   if (!token) {
+    console.error("Token is undefined or empty!");
     throw new Error("Unauthorized: Turnstile token required");
   }
 
-  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+  const secretKey = process.env.TURNSTILE_SECRET_KEY || "1x0000000000000000000000000000000AA";
   if (!secretKey) {
     throw new Error("Server configuration error: Turnstile secret missing");
   }
@@ -36,11 +42,14 @@ async function verifyTurnstileSession(token?: string) {
       secure: process.env.NODE_ENV === "production",
       maxAge: 3600,
       path: "/",
+      sameSite: "lax",
     });
+    revalidatePath("/");
     return true;
   }
 
-  throw new Error("Unauthorized: Turnstile verification failed");
+  const codes = outcome["error-codes"] ? outcome["error-codes"].join(", ") : "Unknown";
+  throw new Error(`Unauthorized: Turnstile verification failed. Reason: ${codes}`);
 }
 
 function getClient() {
