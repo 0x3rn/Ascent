@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AiMagicButton } from "@/components/builder/ai-magic-button";
 import { enhanceSummary } from "@/app/actions/resume-ai";
+import { useTurnstile } from "@/components/turnstile-provider";
 
 export function PersonalInfoSection() {
   const { data, updatePersonalInfo } = useResume();
+  const { turnstileToken } = useTurnstile();
   const { personalInfo } = data;
 
   return (
@@ -54,7 +56,7 @@ export function PersonalInfoSection() {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-medium text-zinc-500">Professional Summary</label>
-          <AiMagicButton onClick={() => enhanceSummary(personalInfo.summary)} onResult={(text) => updatePersonalInfo({ summary: text })} label="Enhance" />
+          <AiMagicButton onClick={() => enhanceSummary(personalInfo.summary, turnstileToken || undefined)} onResult={(text) => updatePersonalInfo({ summary: text })} label="Enhance" />
         </div>
         <Textarea value={personalInfo.summary} onChange={(e) => updatePersonalInfo({ summary: e.target.value })} placeholder="A brief, compelling summary of your professional identity..." className="min-h-[100px] text-sm leading-relaxed" />
       </div>

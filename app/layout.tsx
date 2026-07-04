@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Lora } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/sonner";
+import { TurnstileProvider } from "@/components/turnstile-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -57,7 +59,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <TurnstileProvider>
+            {children}
+            <Toaster />
+          </TurnstileProvider>
         </ThemeProvider>
       </body>
     </html>

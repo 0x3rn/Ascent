@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Wand2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTurnstile } from "@/components/turnstile-provider";
 
 interface AiMagicButtonProps {
   onClick: () => Promise<string | void>;
@@ -19,6 +20,7 @@ export function AiMagicButton({
   className,
 }: AiMagicButtonProps) {
   const [loading, setLoading] = useState(false);
+  const { handleUnauthorized, setSessionVerified } = useTurnstile();
 
   const handleClick = async () => {
     setLoading(true);
@@ -26,9 +28,11 @@ export function AiMagicButton({
       const result = await onClick();
       if (result) {
         onResult(result);
+        setSessionVerified();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI enhancement failed:", err);
+      handleUnauthorized(err);
     } finally {
       setLoading(false);
     }

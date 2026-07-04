@@ -9,6 +9,7 @@ import { enhanceBulletPoint, fixGrammar, tailorToJob } from "@/app/actions/resum
 import { Plus, Trash2, Wand2, GripVertical } from "lucide-react";
 import { useState } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { useTurnstile } from "@/components/turnstile-provider";
 
 function TailorDialog({
   expId,
@@ -20,6 +21,7 @@ function TailorDialog({
   onClose: () => void;
 }) {
   const { updateExperience } = useResume();
+  const { turnstileToken, handleUnauthorized, setSessionVerified } = useTurnstile();
   const [jobDesc, setJobDesc] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,12 +29,14 @@ function TailorDialog({
     if (!jobDesc.trim()) return;
     setLoading(true);
     try {
-      const result = await tailorToJob(bullets, jobDesc);
+      const result = await tailorToJob(bullets, jobDesc, turnstileToken || undefined);
       if (result) {
         updateExperience(expId, { bullets: result });
+        setSessionVerified();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Tailor failed:", err);
+      handleUnauthorized(err);
     } finally {
       setLoading(false);
       onClose();
@@ -55,6 +59,7 @@ function TailorDialog({
 
 export function ExperienceSection() {
   const { data, updateExperience, addExperience, removeExperience, reorderItems } = useResume();
+  const { turnstileToken } = useTurnstile();
   const [tailorOpenId, setTailorOpenId] = useState<string | null>(null);
   const { experience } = data;
 
@@ -103,8 +108,8 @@ export function ExperienceSection() {
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-zinc-500">Bullet Points<span className="ml-1 text-zinc-400 font-normal">(one per line, Markdown supported)</span></label>
                         <div className="flex items-center gap-1 flex-nowrap">
-                          <AiMagicButton onClick={() => fixGrammar(exp.bullets)} onResult={(text) => updateExperience(exp.id, { bullets: text })} label="Fix Grammar" className="text-[10px] px-1.5 h-7" />
-                          <AiMagicButton onClick={() => enhanceBulletPoint(exp.bullets)} onResult={(text) => updateExperience(exp.id, { bullets: text })} label="Enhance" className="text-[10px] px-1.5 h-7" />
+                          <AiMagicButton onClick={() => fixGrammar(exp.bullets, turnstileToken || undefined)} onResult={(text) => updateExperience(exp.id, { bullets: text })} label="Fix Grammar" className="text-[10px] px-1.5 h-7" />
+                          <AiMagicButton onClick={() => enhanceBulletPoint(exp.bullets, turnstileToken || undefined)} onResult={(text) => updateExperience(exp.id, { bullets: text })} label="Enhance" className="text-[10px] px-1.5 h-7" />
                           <Button variant="magic" size="sm" onClick={() => setTailorOpenId(tailorOpenId === exp.id ? null : exp.id)} className="gap-1 shrink-0 text-[10px] px-1.5 h-7"><Wand2 className="h-3 w-3" /><span className="hidden xs:inline">Tailor to Job</span><span className="xs:hidden">Tailor</span></Button>
                         </div>
                         <Textarea value={exp.bullets} onChange={(e) => updateExperience(exp.id, { bullets: e.target.value })} placeholder="- Led redesign of core product...&#10;- Grew revenue by X%..." className="min-h-[100px] text-sm leading-relaxed font-mono" />

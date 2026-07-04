@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, X, Plus } from "lucide-react";
 import { generateCoverLetter } from "@/app/actions/resume-ai";
+import { useTurnstile } from "@/components/turnstile-provider";
 
 interface CoverLetterBuilderProps {
   onGenerate: (
@@ -20,6 +21,7 @@ interface CoverLetterBuilderProps {
 
 export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
   const { data } = useResume();
+  const { turnstileToken, handleUnauthorized, setSessionVerified } = useTurnstile();
   const [userName, setUserName] = useState(data.personalInfo.fullName || "");
   const [targetRole, setTargetRole] = useState(data.personalInfo.title || "");
   const [companyName, setCompanyName] = useState("");
@@ -63,10 +65,12 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
         bg = parts.join("\n");
       }
 
-      const body = await generateCoverLetter(userName, targetRole, companyName, skills, bg);
+      const body = await generateCoverLetter(userName, targetRole, companyName, skills, bg, turnstileToken || undefined);
       onGenerate(body, targetRole, companyName, userName, skills, useResumeData);
-    } catch (err) {
+      setSessionVerified();
+    } catch (err: any) {
       console.error("Cover letter generation failed:", err);
+      handleUnauthorized(err);
     } finally {
       setLoading(false);
     }
