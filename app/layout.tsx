@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter, Lora } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TurnstileProvider } from "@/components/turnstile-provider";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -64,6 +65,7 @@ export default function RootLayout({
             <Toaster />
           </TurnstileProvider>
         </ThemeProvider>
+        <GoogleAnalytics gaId="G-B4D6X36XLN" />
       </body>
     </html>
   );
