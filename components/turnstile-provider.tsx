@@ -35,10 +35,13 @@ export function TurnstileProvider({ children }: { children: ReactNode }) {
     <TurnstileContext.Provider value={{ turnstileToken: turnstileToken || undefined, isSessionVerified, handleUnauthorized, setSessionVerified }}>
       {children}
       {!isSessionVerified && (
-        <div className="fixed bottom-4 right-4 z-[9999] bg-white dark:bg-zinc-900 rounded-lg shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
+        <div className="fixed bottom-4 right-4 z-[9999] rounded-[14px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <Turnstile 
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
-            onSuccess={(token) => setTurnstileToken(token)}
+            onSuccess={(token) => {
+              setTurnstileToken(token);
+              setIsSessionVerified(true);
+            }}
             onError={() => {
               setTurnstileToken(null);
               toast.error("Security check failed. Please try again.");
