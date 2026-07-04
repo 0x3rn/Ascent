@@ -191,7 +191,50 @@ export async function scoreATS(
   resumeData: string,
   jobDescription: string
 ): Promise<string> {
-  const prompt = `You are an ATS (Applicant Tracking System). Compare the following resume data to the Job Description. Return ONLY a strict JSON object containing: 'score' (number 0-100), 'missingKeywords' (array of strings representing critical missing skills/keywords), and 'quickTip' (1 actionable sentence). No markdown, no code fences.
+  const prompt = `You are an elite Tech Recruiter and advanced ATS (Applicant Tracking System). Compare the candidate's resume against the target Job Description (JD). 
+
+Do NOT use exact-keyword matching. Use semantic equivalents (e.g., "Built payment infrastructure" matches "Payment processing").
+
+Evaluate based on these strict rules:
+1. Section Weighting: Experience is worth 3x, Projects 2.5x, Summary 2x, Skills 1x. Do not heavily reward keywords buried only in a skills list.
+2. Quantified Impact: Reward metrics (+5), percentages (+3), scale (+4), and business outcomes. Punish generic statements like "Built internal tools".
+3. Keyword Stuffing: Repeated keywords yield diminishing returns (1st=100%, 2nd=20%, 3rd=0%).
+4. Dual Scoring: Evaluate two separate scores (0-100):
+   - ATS Compatibility: Focuses on semantic keyword coverage and structure.
+   - Recruiter Appeal: Focuses on achievements, clarity, impact, progression, and ownership.
+
+You must return a STRICT JSON object matching this exact schema, with no markdown formatting outside of the JSON:
+{
+  "scores": {
+    "atsCompatibility": number,
+    "recruiterAppeal": number,
+    "compositeScore": number // Weighted: 35% Semantic Skills, 20% Experience, 15% Domain, 10% Metrics, 10% Tech Depth, 5% Structure, 5% Keywords
+  },
+  "skillConcepts": [
+    {
+      "category": string, // e.g., "Messaging Systems", "Backend Engineering"
+      "matchPercentage": number,
+      "matchedSkills": [string], // e.g., ["Kafka", "RabbitMQ"]
+      "missingSkills": [string]
+    }
+  ],
+  "insights": {
+    "strongAreas": [string],
+    "weakAreas": [string],
+    "recruiterFeedback": string // e.g., "Your resume demonstrates strong backend engineering but lacks financial systems ownership."
+  },
+  "projectEvaluation": {
+    "matchStatus": string, // One of: "Strong Match", "Partial Match", "Weak Match", "No Matching Projects", "No Projects Listed"
+    "feedback": string // Detailed explanation of how well their projects align with the JD, or what is missing.
+  },
+  "actionableRewrites": [
+    {
+      "originalText": string, // A weak bullet from their resume
+      "improvedText": string, // A metric-driven rewrite tailored to the JD
+      "reason": string
+    }
+  ]
+}
 
 Resume Data:
 """
@@ -205,7 +248,7 @@ ${jobDescription}
 
 Return ONLY the JSON object.`;
 
-  const result = await runDeepSeek(prompt, 1024);
+  const result = await runDeepSeek(prompt, 2048);
   return result.replace(/^```json\s*|```$/g, "").trim();
 }
 
@@ -239,3 +282,5 @@ CRITICAL: Do NOT use em-dashes. Return ONLY the formatted guide. No conversation
 
   return runDeepSeek(prompt, 2048);
 }
+
+

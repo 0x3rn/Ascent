@@ -16,14 +16,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  shortenCoverLetter, generateCoverLetter,
-  parseRawResume, scoreATS, generateInterviewPrep,
+  parseRawResume, generateCoverLetter, generateInterviewPrep, scoreATS, shortenCoverLetter
 } from "@/app/actions/resume-ai";
+
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import {
   FileText, Download, ExternalLink, User, Briefcase, FolderKanban,
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
-  Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X,
+  Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -64,6 +81,14 @@ const COLORS = [
   { value: "black", label: "Black" },
 ];
 
+type ATSResult = {
+  scores: { atsCompatibility: number; recruiterAppeal: number; compositeScore: number; };
+  skillConcepts: { category: string; matchPercentage: number; matchedSkills: string[]; missingSkills: string[]; }[];
+  insights: { strongAreas: string[]; weakAreas: string[]; recruiterFeedback: string; };
+  projectEvaluation: { matchStatus: string; feedback: string; };
+  actionableRewrites: { originalText: string; improvedText: string; reason: string; }[];
+};
+
 function ResumeBuilderInner() {
   const { data } = useResume();
   const dispatchers = useResume();
@@ -96,10 +121,13 @@ function ResumeBuilderInner() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteRaw, setPasteRaw] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
+  const [atsRole, setAtsRole] = useState("");
+  const [atsCompany, setAtsCompany] = useState("");
   const [atsJD, setAtsJD] = useState("");
   const [atsLoading, setAtsLoading] = useState(false);
-  const [atsResult, setAtsResult] = useState<{ score: number; missingKeywords: string[]; quickTip: string } | null>(null);
+  const [atsResult, setAtsResult] = useState<ATSResult | null>(null);
 
   const [coverPreviewScale, setCoverPreviewScale] = useState(1);
   const [intPreviewScale, setIntPreviewScale] = useState(1);
@@ -180,14 +208,21 @@ function ResumeBuilderInner() {
       dispatchers.loadResume(newData);
       setPasteOpen(false);
       setPasteRaw("");
-    } catch {
-      alert("Failed to parse.");
+    } catch (e) {
+      alert("Failed to parse. Please try again.");
     } finally {
       setPasteLoading(false);
     }
   };
 
-  const handleATSScan = async () => { if (!atsJD.trim()) return; setAtsLoading(true); setAtsResult(null); try { const bg = `Summary: ${data.personalInfo.summary}\nExperience: ${data.experience.map(e => `${e.role} at ${e.company}: ${e.bullets}`).join("\n")}\nSkills: ${data.skills.map(s => `${s.category}: ${s.skills}`).join("\n")}`; setAtsResult(JSON.parse(await scoreATS(bg, atsJD))); } catch { setAtsResult(null); } finally { setAtsLoading(false); } };
+  /* 
+  // PDF Upload feature temporarily disabled
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ...
+  };
+  */
+
+  const handleATSScan = async () => { if (!atsJD.trim()) return; setAtsLoading(true); setAtsResult(null); try { const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience.map(e => ({ role: e.role, company: e.company, description: e.bullets })), Projects: data.projects.map(p => ({ name: p.name, skills: p.skills, description: p.bullets })), Skills: data.skills.map(s => ({ category: s.category, skills: s.skills })) }); const fullJD = `Role: ${atsRole}\nCompany: ${atsCompany}\n\nDescription:\n${atsJD}`; setAtsResult(JSON.parse(await scoreATS(bg, fullJD))); } catch { setAtsResult(null); } finally { setAtsLoading(false); } };
   const handleIntGenerate = async () => {
     if (!intRole.trim() || !intCompany.trim()) return;
     setIntGenerating(true);
@@ -238,19 +273,168 @@ function ResumeBuilderInner() {
   function renderLeftPane() {
     if (isRes && isAts) {
       return (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400"><Target className="h-4 w-4" />ATS Matcher</div>
-          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-950/20 space-y-3">
-            <Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a job description..." className="min-h-[80px]" />
-            <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" size="sm" className="w-full gap-1.5">{atsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{atsLoading ? "Scanning..." : "Scan Resume"}</Button>
-            {atsResult && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className={`h-full rounded-full ${atsResult.score >= 70 ? "bg-green-500" : atsResult.score >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${atsResult.score}%` }} /></div><span className="text-xs font-semibold">{atsResult.score}/100</span></div>
-                {atsResult.missingKeywords.length > 0 && (<div className="flex flex-wrap gap-1">{atsResult.missingKeywords.map((k, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">{k}</span>)}</div>)}
-                {atsResult.quickTip && <p className="text-[11px] text-blue-700 dark:text-blue-400">{atsResult.quickTip}</p>}
-              </div>
-            )}
+        <div className="space-y-4 pb-12">
+          <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400"><Target className="h-4 w-4" />Semantic Recruiter Engine</div>
+          
+          <div className="p-4 rounded-xl border border-blue-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 shadow-sm space-y-4">
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role</label><Input value={atsRole} onChange={e => setAtsRole(e.target.value)} placeholder="e.g. Senior Frontend Engineer" className="h-9 text-sm" /></div>
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company (Optional)</label><Input value={atsCompany} onChange={e => setAtsCompany(e.target.value)} placeholder="e.g. Acme Corp" className="h-9 text-sm" /></div>
+            <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Job Description <span className="text-red-400">*</span></label><Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a target job description..." className="min-h-[100px] text-sm" /></div>
+            <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" className="w-full gap-2 shadow-sm font-semibold h-9">
+              {atsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {atsLoading ? "Running Semantic Evaluation..." : "Generate Recruiter Report"}
+            </Button>
           </div>
+
+          {atsLoading && (
+            <div className="space-y-4 animate-pulse pt-4">
+              <Skeleton className="h-28 w-full rounded-xl" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-40 w-full rounded-xl" />
+              </div>
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </div>
+          )}
+
+          {atsResult && !atsLoading && (
+            <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {/* Score Header */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Overall Match", val: atsResult.scores.compositeScore, primary: true },
+                  { label: "ATS Compatibility", val: atsResult.scores.atsCompatibility },
+                  { label: "Recruiter Appeal", val: atsResult.scores.recruiterAppeal }
+                ].map((s, i) => (
+                  <Card key={i} className="flex flex-col items-center justify-center p-4 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                    <div className="relative flex items-center justify-center mb-2">
+                      <svg className="w-14 h-14 transform -rotate-90">
+                        <circle className="text-zinc-200 dark:text-zinc-800" strokeWidth="6" stroke="currentColor" fill="transparent" r="24" cx="28" cy="28" />
+                        <circle className={`${s.val >= 75 ? 'text-green-500' : s.val >= 50 ? 'text-amber-500' : 'text-red-500'}`} strokeWidth="6" strokeDasharray={150} strokeDashoffset={150 - (150 * s.val) / 100} strokeLinecap="round" stroke="currentColor" fill="transparent" r="24" cx="28" cy="28" style={{ transition: 'stroke-dashoffset 1s ease-in-out' }} />
+                      </svg>
+                      <span className="absolute text-sm font-extrabold text-zinc-900 dark:text-zinc-50">{s.val}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-center text-zinc-500 uppercase tracking-wider">{s.label}</span>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Insights Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-green-100 bg-green-50/30 dark:border-green-900/50 dark:bg-green-900/10">
+                  <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-4 w-4" /> Strong Areas</CardTitle></CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <ul className="space-y-1.5">
+                      {atsResult.insights.strongAreas.map((area, i) => (
+                        <li key={i} className="text-xs text-green-800 dark:text-green-300 leading-snug flex items-start gap-1.5">
+                           <span className="text-green-500 shrink-0">•</span> {area}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+                <Card className="border-red-100 bg-red-50/30 dark:border-red-900/50 dark:bg-red-900/10">
+                  <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400"><XCircle className="h-4 w-4" /> Weak Areas</CardTitle></CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <ul className="space-y-1.5">
+                      {atsResult.insights.weakAreas.map((area, i) => (
+                        <li key={i} className="text-xs text-red-800 dark:text-red-300 leading-snug flex items-start gap-1.5">
+                           <span className="text-red-500 shrink-0">•</span> {area}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Project Evaluation Section */}
+              {atsResult.projectEvaluation && (
+                <div className="pt-2">
+                  <Card className="border-blue-100 dark:border-blue-900/50 shadow-sm overflow-hidden bg-white dark:bg-zinc-950">
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3.5 border-b border-blue-100 dark:border-blue-900/30 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-blue-800 dark:text-blue-300">
+                        <FolderKanban className="h-4 w-4" /> Project Alignment
+                      </h3>
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-semibold">{atsResult.projectEvaluation.matchStatus}</Badge>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{atsResult.projectEvaluation.feedback}</p>
+                    </div>
+                  </Card>
+                </div>
+              )}
+              
+              <div className="p-3 bg-blue-50/60 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl">
+                <p className="text-[10px] font-bold uppercase text-blue-600 mb-1 flex items-center gap-1.5"><User className="h-3 w-3" /> Recruiter Note</p>
+                <p className="text-xs text-blue-900 dark:text-blue-100 leading-relaxed italic">&quot;{atsResult.insights.recruiterFeedback}&quot;</p>
+              </div>
+
+              {/* Skill Concepts */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200"><Wrench className="h-4 w-4" /> Concept-Based Analysis</h3>
+                <Accordion className="w-full space-y-2">
+                  {atsResult.skillConcepts.map((concept, i) => (
+                    <AccordionItem key={i} value={`item-${i}`} className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg px-1 overflow-hidden">
+                      <AccordionTrigger className="hover:no-underline py-3 px-3">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span className="text-sm font-medium">{concept.category}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold ${concept.matchPercentage >= 75 ? 'text-green-600' : concept.matchPercentage >= 40 ? 'text-amber-500' : 'text-red-500'}`}>{concept.matchPercentage}%</span>
+                            <div className="w-16 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                              <div className={`h-full ${concept.matchPercentage >= 75 ? 'bg-green-500' : concept.matchPercentage >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${concept.matchPercentage}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-3 pb-3 pt-1 space-y-3">
+                        {concept.matchedSkills.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase">Matched</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {concept.matchedSkills.map((s, idx) => <Badge key={idx} className="text-[10px] bg-green-600 hover:bg-green-700 text-white border-0 font-medium shadow-none">{s}</Badge>)}
+                            </div>
+                          </div>
+                        )}
+                        {concept.missingSkills.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase">Missing</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {concept.missingSkills.map((s, idx) => <Badge key={idx} className="text-[10px] bg-red-600 hover:bg-red-700 text-white border-0 font-medium shadow-none">{s}</Badge>)}
+                            </div>
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+
+              {/* Actionable Rewrites */}
+              {atsResult.actionableRewrites.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200"><Wand2 className="h-4 w-4" /> Bullet Point Upgrades</h3>
+                  <div className="space-y-4">
+                    {atsResult.actionableRewrites.map((rewrite, i) => (
+                      <Card key={i} className="overflow-hidden shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                        <div className="p-4 bg-white dark:bg-zinc-950 border-b border-zinc-200/60 dark:border-zinc-800/60">
+                          <span className="text-[10px] font-bold uppercase text-zinc-500 dark:text-zinc-400 mb-1.5 block tracking-wider">Original</span>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-through decoration-zinc-300 dark:decoration-zinc-700">{rewrite.originalText}</p>
+                        </div>
+                        <div className="p-4 bg-white dark:bg-zinc-950">
+                          <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-500 mb-2 flex items-center gap-1.5 tracking-wider"><Sparkles className="h-3 w-3" /> Suggested Refinement</span>
+                          <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 leading-relaxed mb-4">{rewrite.improvedText}</p>
+                          <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 flex items-start gap-2 border border-blue-100/50 dark:border-blue-500/10">
+                            <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-blue-800 dark:text-blue-300 font-medium leading-relaxed">{rewrite.reason}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -261,7 +445,25 @@ function ResumeBuilderInner() {
           {(!isPrev || !isMobile) && (
             <div className="mb-3 flex gap-2">
               <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 active:scale-90"><Sparkles className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
-              <Button onClick={() => { if (confirm("Are you sure you want to clear all resume data? This cannot be undone.")) dispatchers.resetResume(); }} variant="destructive" size="sm" className="flex-1 gap-1.5 text-xs h-8 active:scale-90 transition-all duration-200"><Trash2 className="h-3.5 w-3.5" />Clear All</Button>
+              <AlertDialog>
+                <AlertDialogTrigger render={
+                  <Button variant="destructive" size="sm" className="flex-1 gap-1.5 text-xs h-8 active:scale-90 transition-all duration-200">
+                    <Trash2 className="h-3.5 w-3.5" />Clear All
+                  </Button>
+                } />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to clear all data?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete your resume data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => dispatchers.resetResume()} className="bg-red-600 text-white hover:bg-red-700">Clear All</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
           {activeTab === "personal" && <PersonalInfoSection />}
@@ -329,7 +531,7 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><p className="text-xs text-zinc-500">Paste raw resume text below</p><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-95 transition-all duration-200" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
+      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><div className="flex items-center justify-between"><p className="text-xs text-zinc-500">Paste raw resume text below</p>{/*<div className="relative"><input type="file" accept=".pdf" onChange={handlePdfUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={pdfLoading} /><Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 px-2">{pdfLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}{pdfLoading ? "Extracting..." : "Upload PDF"}</Button></div>*/}</div><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-95 transition-all duration-200" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
         <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>
