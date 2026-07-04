@@ -218,7 +218,7 @@ function ResumeBuilderInner() {
     if (!pasteRaw.trim()) return;
     setPasteLoading(true);
     try {
-      const j = await parseRawResume(pasteRaw);
+      const j = await parseRawResume(pasteRaw, turnstileToken || undefined);
       const p = JSON.parse(j);
       const newData = { ...data };
       
@@ -628,9 +628,25 @@ function ResumeBuilderInner() {
               <Target className="h-4 w-4" />Semantic Recruiter Engine
             </div>
             {atsResult && (
-              <Button onClick={handleClearATS} variant="ghost" size="sm" className="h-8 text-xs text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                <Trash2 className="h-3 w-3 mr-1.5" /> Clear Results
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger render={
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <Trash2 className="h-3 w-3 mr-1.5" /> Clear Results
+                  </Button>
+                } />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to clear ATS results?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the current ATS evaluation.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearATS} className="bg-red-600 text-white hover:bg-red-700">Clear Results</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
           
