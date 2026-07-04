@@ -29,9 +29,25 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://useascent.xyz"),
   title: "Ascent | AI-Powered Career Toolkit",
   description:
     "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides. Powered by DeepSeek.",
+  keywords: ["AI Resume Builder", "ATS Friendly Resume", "Cover Letter Generator", "Interview Prep", "Career Toolkit", "DeepSeek", "Resume Optimization"],
+  authors: [{ name: "Ascent" }],
+  openGraph: {
+    title: "Ascent | AI-Powered Career Toolkit",
+    description: "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides.",
+    url: "https://useascent.xyz",
+    siteName: "Ascent",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ascent | AI-Powered Career Toolkit",
+    description: "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides.",
+  },
 };
 
 export const viewport = {
