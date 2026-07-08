@@ -176,7 +176,9 @@ Return ONLY the raw cover letter body text (the paragraphs between the salutatio
 
 export async function shortenCoverLetter(currentText: string, turnstileToken?: string): Promise<string> {
   await verifyTurnstileSession(turnstileToken);
-  const prompt = `You are an expert editor. Shorten this cover letter to a maximum of 2 highly impactful paragraphs (approx. 15 lines of text). Retain the exact same tone, structure, and key achievements. Do NOT add new information. Return ONLY the shortened letter.
+  const prompt = `You are an expert editor. Shorten this cover letter to a maximum of 2 highly impactful paragraphs (approx. 15 lines of text). Retain the exact same tone, structure, and key achievements. Do NOT add new information. 
+  
+CRITICAL: Do NOT add any generic salutations (e.g. "Dear Hiring Manager", "Sincerely") if they were not in the original text. Return exactly what is given, just shorter.
 
 Cover letter:
 """
@@ -187,6 +189,58 @@ Return ONLY the shortened cover letter body text. Each paragraph separated by a 
 
   const maxTokens: number = currentText.length > 200 ? 512 : 256;
   return runDeepSeek(prompt, maxTokens);
+}
+
+export async function generateFreelanceProposal(
+  userName: string,
+  gigTitle: string,
+  jobDescription: string,
+  proposedApproach: string,
+  similarProject: string,
+  portfolioLink: string,
+  turnaroundTime: string,
+  candidateBackground: string,
+  turnstileToken?: string
+): Promise<string> {
+  await verifyTurnstileSession(turnstileToken);
+  const hasBackground = candidateBackground && candidateBackground.trim().length > 0;
+
+  const prompt = `You are an elite, Top-Rated Plus freelance copywriter helping a user win a gig on Upwork/Fiverr. 
+Write a highly persuasive, concise freelance proposal based on the provided Job Description and the freelancer's details.
+
+User Name: ${userName}
+Gig Title: ${gigTitle}
+Job Description:
+"""
+${jobDescription}
+"""
+
+${proposedApproach ? `Proposed Approach/Hook: ${proposedApproach}` : ""}
+${similarProject ? `Similar Past Project: ${similarProject}` : ""}
+${portfolioLink ? `Portfolio Link: ${portfolioLink}` : ""}
+${turnaroundTime ? `Turnaround Time: ${turnaroundTime}` : ""}
+
+${hasBackground ? `\nFreelancer's Background (use this to highlight relevant experience):\n"""\n${candidateBackground}\n"""\n` : ""}
+
+STRICT RULES:
+1. DO NOT use generic corporate salutations like "Dear Hiring Manager". Start directly with a warm greeting (e.g., "Hi there," or using the client's name if implied).
+2. Hook them in the first sentence by directly referencing their core problem from the Job Description.
+3. Keep it punchy and short (max 3-4 short paragraphs). Clients skim proposals.
+4. If a "Proposed Approach" is provided, weave it in to show we already know how to solve their issue.
+5. If the user provides a "Similar Past Project", you MUST weave it naturally into the proposal. Dedicate a sentence to drawing a direct parallel between that past work and the client's current needs to establish immediate authority and trust. Show the client we've already successfully solved this exact problem.
+6. If a "Portfolio Link" or "Turnaround Time" is provided, include them naturally as proof of competence and readiness.
+7. End with a soft, confident Call to Action (e.g., "Let's hop on a quick chat to discuss the architecture.").
+8. Absolutely no em-dashes (—). No AI buzzwords like 'delve', 'tapestry', or 'testament'. Sound like a confident, human expert.
+
+CRITICAL ANTI-HALLUCINATION RULES:
+1. DO NOT lie or invent past experiences, projects, or case studies. 
+2. If the user provided a "Similar Past Project", use it exactly as provided.
+3. If the "Similar Past Project" field is EMPTY or NOT PROVIDED, you MUST NOT claim to have "done this exact thing before." Instead, lean heavily on the user's "Proposed Approach" and their core skills to prove competence. Focus on HOW you will solve the problem, not on fabricated past work.
+4. Never copy-paste the client's tech stack and claim you built an identical app unless the user's resume data explicitly supports it.
+
+Return ONLY the raw proposal text. No markdown code blocks, no conversational filler.`;
+
+  return runDeepSeek(prompt, 1024);
 }
 
 // ---- SMART PASTE ----
