@@ -44,7 +44,8 @@ import {
   FileText, Download, ExternalLink, User, Briefcase, FolderKanban,
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
   Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload,
-  Send, History, Play, StopCircle, ArrowRight
+  Send, History, Play, StopCircle, ArrowRight, TrendingUp, Star, CircleDollarSign,
+  Map, Rocket, Activity, ArrowUpRight, CheckSquare
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -85,13 +86,7 @@ const COLORS = [
   { value: "black", label: "Black" },
 ];
 
-type ATSResult = {
-  scores: { atsCompatibility: number; recruiterAppeal: number; compositeScore: number; };
-  skillConcepts: { category: string; matchPercentage: number; matchedSkills: string[]; missingSkills: string[]; }[];
-  insights: { strongAreas: string[]; weakAreas: string[]; recruiterFeedback: string; };
-  projectEvaluation: { matchStatus: string; feedback: string; };
-  actionableRewrites: { originalText: string; improvedText: string; reason: string; }[];
-};
+type ATSResult = any;
 
 function ResumeBuilderInner() {
   const { data } = useResume();
@@ -656,7 +651,7 @@ function ResumeBuilderInner() {
             <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Job Description <span className="text-red-400">*</span></label><Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a target job description..." className="min-h-[100px] text-sm" /></div>
             <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" className="w-full gap-2 shadow-sm font-semibold h-9">
               {atsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {atsLoading ? "Running Semantic Evaluation..." : "Generate Recruiter Report"}
+              {atsLoading ? "Running Semantic Evaluation..." : "Generate CareerFit Report"}
             </Button>
           </div>
 
@@ -673,53 +668,314 @@ function ResumeBuilderInner() {
 
           {atsResult && !atsLoading && (
             <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+
+              {/* Executive Summary */}
+              {atsResult.executiveSummary && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 dark:from-blue-950/30 dark:to-indigo-950/30 dark:border-blue-900/50 p-4 rounded-xl shadow-sm text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
+                  <h2 className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> Executive Summary</h2>
+                  {atsResult.executiveSummary}
+                </div>
+              )}
+
               {/* Score Header */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 {[
-                  { label: "Overall Match", val: atsResult.scores.compositeScore, primary: true },
-                  { label: "ATS Compatibility", val: atsResult.scores.atsCompatibility },
-                  { label: "Recruiter Appeal", val: atsResult.scores.recruiterAppeal }
-                ].map((s, i) => (
-                  <Card key={i} className="flex flex-col items-center justify-center p-4 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                    <div className="relative flex items-center justify-center mb-2">
-                      <svg className="w-14 h-14 transform -rotate-90">
-                        <circle className="text-zinc-200 dark:text-zinc-800" strokeWidth="6" stroke="currentColor" fill="transparent" r="24" cx="28" cy="28" />
-                        <circle className={`${s.val >= 75 ? 'text-green-500' : s.val >= 50 ? 'text-amber-500' : 'text-red-500'}`} strokeWidth="6" strokeDasharray={150} strokeDashoffset={150 - (150 * s.val) / 100} strokeLinecap="round" stroke="currentColor" fill="transparent" r="24" cx="28" cy="28" style={{ transition: 'stroke-dashoffset 1s ease-in-out' }} />
+                  { label: "Overall Match", val: atsResult.scores?.overallMatch ?? 0 },
+                  { label: "Resume Quality", val: atsResult.scores?.resumeQuality ?? 0 },
+                  { label: "ATS Compatibility", val: atsResult.scores?.atsCompatibility ?? 0 },
+                  { label: "Exp. Relevance", val: atsResult.scores?.experienceRelevance ?? 0 },
+                  { label: "Technical Match", val: atsResult.scores?.technicalMatch ?? 0 },
+                  { label: "Domain Match", val: atsResult.scores?.domainMatch ?? 0 },
+                  { label: "Recruiter Appeal", val: atsResult.scores?.recruiterAppeal ?? 0 },
+                  { label: "Interview Prob.", val: atsResult.scores?.interviewProbability ?? 0 }
+                ].map((s, i) => {
+                  const valNum = Number(s.val) || 0;
+                  return (
+                  <Card key={i} className="flex flex-col items-center justify-center p-3 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                    <div className="relative flex items-center justify-center mb-1.5">
+                      <svg className="w-12 h-12 transform -rotate-90">
+                        <circle className="text-zinc-200 dark:text-zinc-800" strokeWidth="5" stroke="currentColor" fill="transparent" r="20" cx="24" cy="24" />
+                        <circle className={`${valNum >= 75 ? 'text-green-500' : valNum >= 50 ? 'text-amber-500' : 'text-red-500'}`} strokeWidth="5" strokeDasharray={125.6} strokeDashoffset={125.6 - (125.6 * valNum) / 100} strokeLinecap="round" stroke="currentColor" fill="transparent" r="20" cx="24" cy="24" style={{ transition: 'stroke-dashoffset 1s ease-in-out' }} />
                       </svg>
-                      <span className="absolute text-sm font-extrabold text-zinc-900 dark:text-zinc-50">{s.val}</span>
+                      <span className="absolute text-[11px] font-extrabold text-zinc-900 dark:text-zinc-50">{valNum}</span>
                     </div>
-                    <span className="text-[10px] font-semibold text-center text-zinc-500 uppercase tracking-wider">{s.label}</span>
+                    <span className="text-[9px] font-semibold text-center text-zinc-500 uppercase tracking-wider">{s.label}</span>
                   </Card>
-                ))}
+                )})}
               </div>
+
+              {/* Top 3 Next Steps (At a Glance) */}
+              {atsResult.top3NextSteps && atsResult.top3NextSteps.length > 0 && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 dark:from-amber-950/30 dark:to-orange-950/30 dark:border-amber-900/50 p-4 rounded-xl shadow-sm">
+                  <h3 className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2 mb-3 text-sm">
+                    <TrendingUp className="h-4 w-4" /> At a Glance: Top 3 Next Steps
+                  </h3>
+                  <div className="space-y-2">
+                    {atsResult.top3NextSteps.map((step: string, i: number) => (
+                      <div key={i} className="flex gap-2 items-start text-xs text-amber-900 dark:text-amber-100">
+                        <span className="flex items-center justify-center bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200 rounded-full w-4 h-4 text-[9px] font-bold shrink-0 mt-0.5">{i + 1}</span>
+                        <p className="leading-relaxed">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resume Quality Breakdown */}
+              {atsResult.resumeQualityBreakdown && (
+                <div className="pt-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-2"><CheckSquare className="h-4 w-4 text-sky-500" /> Resume Quality Breakdown</h3>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                    {[
+                      { label: "Formatting", val: atsResult.resumeQualityBreakdown.formatting },
+                      { label: "Content", val: atsResult.resumeQualityBreakdown.contentQuality },
+                      { label: "Achievements", val: atsResult.resumeQualityBreakdown.achievements },
+                      { label: "Action Verbs", val: atsResult.resumeQualityBreakdown.actionVerbs },
+                      { label: "Readability", val: atsResult.resumeQualityBreakdown.readability },
+                      { label: "Organization", val: atsResult.resumeQualityBreakdown.organization }
+                    ].map((q, i) => (
+                      <div key={i} className="flex flex-col items-center justify-center p-2.5 bg-zinc-50 dark:bg-zinc-950 rounded border border-zinc-100 dark:border-zinc-800 text-center">
+                        <span className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 leading-tight">{q.label}</span>
+                        <span className={`text-sm font-bold ${q.val >= 85 ? 'text-green-600' : q.val >= 70 ? 'text-amber-500' : 'text-red-500'}`}>{q.val}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Insights Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="border-green-100 bg-green-50/30 dark:border-green-900/50 dark:bg-green-900/10">
-                  <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-4 w-4" /> Strong Areas</CardTitle></CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <ul className="space-y-1.5">
-                      {atsResult.insights.strongAreas.map((area, i) => (
-                        <li key={i} className="text-xs text-green-800 dark:text-green-300 leading-snug flex items-start gap-1.5">
-                           <span className="text-green-500 shrink-0">•</span> {area}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-                <Card className="border-red-100 bg-red-50/30 dark:border-red-900/50 dark:bg-red-900/10">
-                  <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400"><XCircle className="h-4 w-4" /> Weak Areas</CardTitle></CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <ul className="space-y-1.5">
-                      {atsResult.insights.weakAreas.map((area, i) => (
-                        <li key={i} className="text-xs text-red-800 dark:text-red-300 leading-snug flex items-start gap-1.5">
-                           <span className="text-red-500 shrink-0">•</span> {area}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
+                {atsResult.topStrengths && atsResult.topStrengths.length > 0 ? (
+                  <Card className="border-green-100 bg-green-50/30 dark:border-green-900/50 dark:bg-green-900/10">
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-4 w-4" /> Top Strengths</CardTitle></CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <ul className="space-y-1.5">
+                        {atsResult.topStrengths.map((area: string, i: number) => (
+                          <li key={i} className="text-xs text-green-800 dark:text-green-300 leading-snug flex items-start gap-1.5">
+                             <span className="text-green-500 shrink-0">✓</span> {area}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                ) : atsResult.insights?.strongAreas && atsResult.insights.strongAreas.length > 0 && (
+                  <Card className="border-green-100 bg-green-50/30 dark:border-green-900/50 dark:bg-green-900/10">
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400"><CheckCircle className="h-4 w-4" /> Strong Areas</CardTitle></CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <ul className="space-y-1.5">
+                        {atsResult.insights.strongAreas.map((area: string, i: number) => (
+                          <li key={i} className="text-xs text-green-800 dark:text-green-300 leading-snug flex items-start gap-1.5">
+                             <span className="text-green-500 shrink-0">•</span> {area}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+                {atsResult.missingSkillsImpact ? (
+                  <Card className="border-red-100 bg-red-50/30 dark:border-red-900/50 dark:bg-red-900/10">
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400"><XCircle className="h-4 w-4" /> Missing Skills Impact</CardTitle></CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-3">
+                      {atsResult.missingSkillsImpact.criticalGaps && atsResult.missingSkillsImpact.criticalGaps.length > 0 && (
+                        <div>
+                          <div className="text-[10px] font-bold text-red-800 uppercase mb-2">Critical Gaps</div>
+                          <div className="space-y-3">
+                            {atsResult.missingSkillsImpact.criticalGaps.map((gap: any, i: number) => (
+                              <div key={i} className="bg-white/50 dark:bg-black/20 p-2.5 rounded border border-red-100 dark:border-red-900/30">
+                                <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
+                                  <span className="text-xs font-bold text-red-900 dark:text-red-200 flex items-center gap-1.5"><span className="text-red-500">•</span> {gap.skill}</span>
+                                  {gap.confidence && <span className="text-[9px] bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">{gap.confidence}% Confidence</span>}
+                                </div>
+                                <p className="text-[11px] text-red-800/80 dark:text-red-300/80 leading-snug mb-1.5 break-words whitespace-normal"><span className="font-semibold text-red-800 dark:text-red-300">Reason:</span> {gap.reason}</p>
+                                {gap.whyItMatters && <p className="text-[11px] text-red-800/80 dark:text-red-300/80 leading-snug mb-1.5 break-words whitespace-normal"><span className="font-semibold text-red-800 dark:text-red-300">Why Employers Care:</span> {gap.whyItMatters}</p>}
+                                {gap.commonUseCases && gap.commonUseCases.length > 0 && (
+                                  <div className="text-[10px] flex flex-wrap gap-1 mt-1">
+                                    <span className="font-semibold text-red-800 dark:text-red-300 mr-1">Uses:</span>
+                                    {gap.commonUseCases.map((useCase: string, idx: number) => (
+                                      <span key={idx} className="bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-1 rounded break-words whitespace-normal">{useCase}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {atsResult.missingSkillsImpact.moderateGaps && atsResult.missingSkillsImpact.moderateGaps.length > 0 && (
+                        <div>
+                          <div className="text-[10px] font-bold text-amber-700 uppercase mb-2">Moderate Gaps</div>
+                          <div className="space-y-3">
+                            {atsResult.missingSkillsImpact.moderateGaps.map((gap: any, i: number) => (
+                              <div key={i} className="bg-white/50 dark:bg-black/20 p-2.5 rounded border border-amber-100 dark:border-amber-900/30">
+                                <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
+                                  <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5"><span className="text-amber-500">•</span> {gap.skill}</span>
+                                  {gap.confidence && <span className="text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded font-semibold">{gap.confidence}% Confidence</span>}
+                                </div>
+                                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-snug mb-1.5 break-words whitespace-normal"><span className="font-semibold text-amber-800 dark:text-amber-300">Reason:</span> {gap.reason}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : atsResult.insights?.weakAreas && atsResult.insights.weakAreas.length > 0 && (
+                  <Card className="border-red-100 bg-red-50/30 dark:border-red-900/50 dark:bg-red-900/10">
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400"><XCircle className="h-4 w-4" /> Weak Areas</CardTitle></CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <ul className="space-y-1.5">
+                        {atsResult.insights.weakAreas.map((area: string, i: number) => (
+                          <li key={i} className="text-xs text-red-800 dark:text-red-300 leading-snug flex items-start gap-1.5">
+                             <span className="text-red-500 shrink-0">•</span> {area}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
+
+              {/* Highest ROI Improvements */}
+              {atsResult.highestRoiImprovements && atsResult.highestRoiImprovements.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-3"><TrendingUp className="h-4 w-4 text-purple-500" /> Highest ROI Improvements</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {atsResult.highestRoiImprovements.map((improvement: any, i: number) => (
+                      <Card key={i} className="flex flex-col p-3 shadow-sm border-zinc-200 dark:border-zinc-800 bg-purple-50/30 dark:bg-purple-900/10">
+                        <div className="flex justify-between items-start mb-1.5">
+                          <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{improvement.skill}</span>
+                          <div className="flex gap-0.5 text-purple-500">
+                            {Array.from({ length: 5 }).map((_, starIdx) => (
+                              <Star key={starIdx} className={`h-3.5 w-3.5 ${starIdx < improvement.stars ? 'fill-purple-500 text-purple-500' : 'text-zinc-300 dark:text-zinc-700'}`} />
+                            ))}
+                          </div>
+                        </div>
+                        {improvement.expectedImpact && (
+                          <div className="flex gap-2 items-center mb-2">
+                            <span className="text-[10px] font-bold text-purple-600 bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                              Impact: {improvement.expectedImpact}
+                            </span>
+                            {improvement.estimatedMatchImprovementRange && (
+                              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                +{improvement.estimatedMatchImprovementRange} to Match Score
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {improvement.reason && (
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-snug">{improvement.reason}</p>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Skill Transferability & Hiring Recommendation */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {atsResult.skillTransferability && (
+                  <Card className="border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/50 dark:bg-emerald-900/10">
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-emerald-700 dark:text-emerald-400"><Sparkles className="h-4 w-4" /> Skill Transferability</CardTitle></CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-3">
+                      <div>
+                        <div className="text-[10px] font-bold text-emerald-800 uppercase mb-1">Transferable Strengths</div>
+                        <ul className="space-y-1">
+                          {atsResult.skillTransferability.transferableStrengths.map((s: string, i: number) => (
+                            <li key={i} className="text-xs text-emerald-800 dark:text-emerald-300 leading-snug flex items-start gap-1.5"><span className="text-emerald-500 shrink-0">✓</span> {s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold text-emerald-800 uppercase mb-1">Foundation For</div>
+                        <ul className="space-y-1">
+                          {atsResult.skillTransferability.foundationFor.map((s: string, i: number) => (
+                            <li key={i} className="text-xs text-emerald-800 dark:text-emerald-300 leading-snug flex items-start gap-1.5"><span className="text-emerald-500 shrink-0">•</span> {s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {atsResult.hiringRecommendation && (
+                  <Card className="border-indigo-100 bg-indigo-50/30 dark:border-indigo-900/50 dark:bg-indigo-900/10">
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-indigo-700 dark:text-indigo-400"><User className="h-4 w-4" /> Hiring Recommendation</CardTitle></CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-2 text-xs text-indigo-900 dark:text-indigo-200">
+                      <div className="flex justify-between border-b border-indigo-100 dark:border-indigo-800/30 pb-1.5">
+                        <span className="font-semibold">Current Fit</span>
+                        <span>{atsResult.hiringRecommendation.currentFit}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-indigo-100 dark:border-indigo-800/30 pb-1.5">
+                        <span className="font-semibold">Interview Worthy</span>
+                        <span>{atsResult.hiringRecommendation.interviewWorthy ? "Yes" : "No"}</span>
+                      </div>
+                      {atsResult.hiringRecommendation.hiringConfidence && (
+                        <div className="flex justify-between border-b border-indigo-100 dark:border-indigo-800/30 pb-1.5">
+                          <span className="font-semibold">Hiring Confidence</span>
+                          <span>{atsResult.hiringRecommendation.hiringConfidence}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-b border-indigo-100 dark:border-indigo-800/30 pb-1.5">
+                        <span className="font-semibold">Est. Onboarding</span>
+                        <span>{atsResult.hiringRecommendation.estimatedOnboardingTime}</span>
+                      </div>
+                      <div className="pt-1">
+                        <span className="font-semibold block mb-1">Reason:</span>
+                        <p className="leading-snug">{atsResult.hiringRecommendation.reason}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Best Matching Roles & Salary Estimate */}
+              {(atsResult.similarRoles?.length > 0 || atsResult.estimatedCompetitiveness) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {atsResult.similarRoles && atsResult.similarRoles.length > 0 && (
+                    <Card className="border-sky-100 bg-sky-50/30 dark:border-sky-900/50 dark:bg-sky-900/10">
+                      <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-sky-700 dark:text-sky-400"><Briefcase className="h-4 w-4" /> Better Matched Roles</CardTitle></CardHeader>
+                      <CardContent className="px-4 pb-4 space-y-2 text-xs text-sky-900 dark:text-sky-200">
+                        {atsResult.similarRoles.map((role: any, i: number) => (
+                          <div key={i} className="flex justify-between border-b border-sky-100 dark:border-sky-800/30 pb-1.5 last:border-0 last:pb-0">
+                            <span className="font-medium">{role.role}</span>
+                            <span className="font-bold text-sky-700 dark:text-sky-300">{role.matchPercentage}%</span>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+                  {atsResult.estimatedCompetitiveness && (
+                    <Card className="border-amber-100 bg-amber-50/30 dark:border-amber-900/50 dark:bg-amber-900/10">
+                      <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-amber-700 dark:text-amber-400"><CircleDollarSign className="h-4 w-4" /> Estimated Competitiveness</CardTitle></CardHeader>
+                      <CardContent className="px-4 pb-4 space-y-3 text-xs text-amber-900 dark:text-amber-200">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-semibold text-sm">Overall Level: {atsResult.estimatedCompetitiveness.currentLevel}</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {atsResult.estimatedCompetitiveness.resumeQualityPercentile && (
+                            <div className="flex justify-between border-b border-amber-100 dark:border-amber-800/30 pb-1.5">
+                              <span className="font-medium">Resume Quality</span>
+                              <span className="font-bold">{atsResult.estimatedCompetitiveness.resumeQualityPercentile}</span>
+                            </div>
+                          )}
+                          {atsResult.estimatedCompetitiveness.technicalMatchPercentile && (
+                            <div className="flex justify-between border-b border-amber-100 dark:border-amber-800/30 pb-1.5">
+                              <span className="font-medium">Technical Match</span>
+                              <span className="font-bold">{atsResult.estimatedCompetitiveness.technicalMatchPercentile}</span>
+                            </div>
+                          )}
+                          {atsResult.estimatedCompetitiveness.atsCompatibilityPercentile && (
+                            <div className="flex justify-between border-b border-amber-100 dark:border-amber-800/30 pb-1.5">
+                              <span className="font-medium">ATS Compatibility</span>
+                              <span className="font-bold">{atsResult.estimatedCompetitiveness.atsCompatibilityPercentile}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
 
               {/* Project Evaluation Section */}
               {atsResult.projectEvaluation && (
@@ -747,11 +1003,32 @@ function ResumeBuilderInner() {
                 <p className="text-xs text-blue-900 dark:text-blue-100 leading-relaxed italic">&quot;{atsResult.insights.recruiterFeedback}&quot;</p>
               </div>
 
+              {/* Requirements Comparison */}
+              {atsResult.requirementsComparison && atsResult.requirementsComparison.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-2"><CheckSquare className="h-4 w-4 text-sky-500" /> Strength vs Job Requirements</h3>
+                  <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-950 shadow-sm">
+                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {atsResult.requirementsComparison.map((req: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
+                          <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{req.requirement}</span>
+                          {req.status === "Strong" ? (
+                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px]"><CheckCircle className="h-3 w-3 mr-1" /> Strong</Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 border-0 text-[10px]"><XCircle className="h-3 w-3 mr-1" /> Missing</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Skill Concepts */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200"><Wrench className="h-4 w-4" /> Concept-Based Analysis</h3>
                 <Accordion className="w-full space-y-2">
-                  {atsResult.skillConcepts.map((concept, i) => (
+                  {atsResult.skillConcepts.map((concept: any, i: number) => (
                     <AccordionItem key={i} value={`item-${i}`} className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg px-1 overflow-hidden">
                       <AccordionTrigger className="hover:no-underline py-3 px-3">
                         <div className="flex items-center justify-between w-full pr-4">
@@ -769,7 +1046,7 @@ function ResumeBuilderInner() {
                           <div className="space-y-1.5">
                             <span className="text-[10px] font-semibold text-zinc-500 uppercase">Matched</span>
                             <div className="flex flex-wrap gap-1.5">
-                              {concept.matchedSkills.map((s, idx) => <Badge key={idx} className="text-[10px] bg-green-600 hover:bg-green-700 text-white border-0 font-medium shadow-none">{s}</Badge>)}
+                              {concept.matchedSkills.map((s: string, idx: number) => <Badge key={idx} className="text-[10px] bg-green-600 hover:bg-green-700 text-white border-0 font-medium shadow-none">{s}</Badge>)}
                             </div>
                           </div>
                         )}
@@ -777,7 +1054,7 @@ function ResumeBuilderInner() {
                           <div className="space-y-1.5">
                             <span className="text-[10px] font-semibold text-zinc-500 uppercase">Missing</span>
                             <div className="flex flex-wrap gap-1.5">
-                              {concept.missingSkills.map((s, idx) => <Badge key={idx} className="text-[10px] bg-red-600 hover:bg-red-700 text-white border-0 font-medium shadow-none">{s}</Badge>)}
+                              {concept.missingSkills.map((s: string, idx: number) => <Badge key={idx} className="text-[10px] bg-red-600 hover:bg-red-700 text-white border-0 font-medium shadow-none">{s}</Badge>)}
                             </div>
                           </div>
                         )}
@@ -792,7 +1069,7 @@ function ResumeBuilderInner() {
                 <div className="space-y-3 pt-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200"><Wand2 className="h-4 w-4" /> Bullet Point Upgrades</h3>
                   <div className="space-y-4">
-                    {atsResult.actionableRewrites.map((rewrite, i) => (
+                    {atsResult.actionableRewrites.map((rewrite: any, i: number) => (
                       <Card key={i} className="overflow-hidden shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
                         <div className="p-4 bg-white dark:bg-zinc-950 border-b border-zinc-200/60 dark:border-zinc-800/60">
                           <span className="text-[10px] font-bold uppercase text-red-500/80 dark:text-red-400/80 mb-1.5 block tracking-wider">Original (Weak)</span>
@@ -811,6 +1088,80 @@ function ResumeBuilderInner() {
                   </div>
                 </div>
               )}
+
+              {/* Learning Path */}
+              {atsResult.learningPath && atsResult.learningPath.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-3"><Map className="h-4 w-4 text-emerald-500" /> Recommended Learning Path</h3>
+                  <Card className="border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm bg-emerald-50/20 dark:bg-emerald-900/10 p-4">
+                    <ol className="relative border-l border-emerald-200 dark:border-emerald-800 ml-3 space-y-4">
+                      {atsResult.learningPath.map((step: string, i: number) => (
+                        <li key={i} className="pl-5 relative">
+                          <div className="absolute w-5 h-5 bg-emerald-100 dark:bg-emerald-900/50 rounded-full -left-[10.5px] top-[-2px] flex items-center justify-center border-2 border-white dark:border-zinc-950">
+                            <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{i + 1}</span>
+                          </div>
+                          <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 leading-relaxed pt-0.5">{step}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  </Card>
+                </div>
+              )}
+
+              {/* Predicted Impact */}
+              {atsResult.predictedImpact && (
+                <div className="pt-2">
+                  <Card className="border-blue-200 dark:border-blue-800/50 overflow-hidden shadow-md bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Rocket className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="text-base font-bold text-blue-900 dark:text-blue-300">Preview New Score</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">If you apply these suggested improvements:</p>
+                        <ul className="space-y-1.5 ml-1">
+                          {atsResult.predictedImpact.actions.map((action: string, i: number) => (
+                            <li key={i} className="text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2">
+                              <span className="text-blue-500 mt-0.5">•</span> {action}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-white/60 dark:bg-zinc-950/40 rounded-lg p-3 grid grid-cols-2 gap-4 border border-blue-100 dark:border-blue-900/30">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 mb-1">Predicted Overall Match</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-zinc-500 line-through decoration-zinc-400">{atsResult.scores?.overallMatch ?? 0}%</span>
+                            <ArrowRight className="h-3 w-3 text-zinc-400" />
+                            <span className="text-lg font-black text-green-600 dark:text-green-500">{atsResult.predictedImpact.predictedOverallMatch}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 mb-1">Interview Probability</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-zinc-500 line-through decoration-zinc-400">{atsResult.scores?.interviewProbability ?? 0}%</span>
+                            <ArrowRight className="h-3 w-3 text-zinc-400" />
+                            <span className="text-lg font-black text-green-600 dark:text-green-500">{atsResult.predictedImpact.predictedInterviewProbability}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Bottom Line */}
+              {atsResult.bottomLine && (
+                <div className="pt-2 pb-6">
+                  <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
+                    <h3 className="text-xs font-bold uppercase text-zinc-800 dark:text-zinc-200 mb-1">Bottom Line</h3>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
+                      {atsResult.bottomLine}
+                    </p>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
         </div>

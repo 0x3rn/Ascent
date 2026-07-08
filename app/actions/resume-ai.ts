@@ -252,49 +252,152 @@ export async function scoreATS(
   turnstileToken?: string
 ): Promise<string> {
   await verifyTurnstileSession(turnstileToken);
-  const prompt = `You are an elite Tech Recruiter and advanced ATS (Applicant Tracking System). Compare the candidate's resume against the target Job Description (JD). 
+  const prompt = `You are an elite Tech Recruiter and advanced ATS (Applicant Tracking System). Compare the candidate's resume against the target Job Description (JD) to generate a "CareerFit Report".
 
 Do NOT use exact-keyword matching. Use semantic equivalents (e.g., "Built payment infrastructure" matches "Payment processing").
 
 Evaluate based on these strict rules:
 1. Section Weighting: Experience is worth 3x, Projects 2.5x, Summary 2x, Skills 1x. Do not heavily reward keywords buried only in a skills list.
-2. Quantified Impact: Reward metrics (+5), percentages (+3), scale (+4), and business outcomes. Punish generic statements like "Built internal tools".
-3. Keyword Stuffing: Repeated keywords yield diminishing returns (1st=100%, 2nd=20%, 3rd=0%).
-4. Dual Scoring: Evaluate two separate scores (0-100):
-   - ATS Compatibility: Focuses on semantic keyword coverage and structure.
-   - Recruiter Appeal: Focuses on achievements, clarity, impact, progression, and ownership.
+2. Quantified Impact & Truthfulness: Reward metrics, scale, and business outcomes. ABSOLUTE RULE: When suggesting bullet upgrades, you must PRESERVE THE FACTS. NEVER invent numbers, percentages, scale, user counts, or time saved if they do not exist in the original resume. Rewrite bullets using only facts already present. If you suggest adding metrics, do not recommend specific fake numbers; instead use phrasing like: "Where possible, quantify the scale of your work (for example, request volume, deployment frequency, or performance improvements)."
+3. Semantic Understanding of Systems: If the JD asks for "Messaging Systems" or "Kafka" and the candidate has strong backend/transactional API experience, assign a partial match (e.g., 15-20%) rather than 0%, as they have relevant building blocks.
+4. Separation of Scores: 
+   - ATS Compatibility: Reflects structure (headings, bullet points).
+   - Job Match (Overall, Experience, Technical, Domain): Reflects actual experience.
+   - Recruiter Appeal & Resume Quality: Should be high (75%+) if formatting, progression, impact, and metrics are strong.
+   - Interview Probability: Driven by Resume Quality, Recruiter Appeal, and Experience Relevance. A strong engineer missing specific domain knowledge often still gets a 60-70% interview probability. The "interviewWorthy" boolean in hiringRecommendation MUST logically align with this probability.
+5. Current Fit Mapping: The "currentFit" field MUST map exactly to the overallMatch score as follows:
+   - 0-39% = Poor Fit
+   - 40-59% = Developing Fit
+   - 60-74% = Competitive
+   - 75-89% = Strong Fit
+   - 90-100% = Excellent Fit
+   - ALWAYS align hiringRecommendation with interviewProbability (e.g. don't say 'Competitive' and 'Interview Worthy: Yes' if the probability is 20%).
+6. Professional Tone & Integrity:
+  - DO NOT invent technologies, frameworks, or tools not explicitly mentioned in the candidate's resume (e.g., if they say "payment API", do not assume "Stripe" or "OAuth"). Stay faithful to the source.
+  - Make the tone of the executiveSummary and bottomLine highly professional, like a senior recruiter. Do not use casual phrases like 'Hey there'. Start directly with an authoritative evaluation (e.g., "Your resume demonstrates a strong foundation...").
+7. Missing Skills & Confidence: For every missing skill gap, estimate an AI confidence level (0-100) based on how certain you are that it is actually missing from their experience, rather than just omitted from the text.
+8. Personalized Learning Path: Tailor the learning path strictly to the user's existing skills. Do not just say "Learn X". Say "Since you have experience with [User Skill Y], the next logical step is to learn [Target Skill X]..."
 
 You must return a STRICT JSON object matching this exact schema, with no markdown formatting outside of the JSON:
 {
   "scores": {
+    "overallMatch": number,
+    "resumeQuality": number,
     "atsCompatibility": number,
+    "experienceRelevance": number,
+    "technicalMatch": number,
+    "domainMatch": number,
     "recruiterAppeal": number,
-    "compositeScore": number // Weighted: 35% Semantic Skills, 20% Experience, 15% Domain, 10% Metrics, 10% Tech Depth, 5% Structure, 5% Keywords
+    "interviewProbability": number
   },
+  "top3NextSteps": [string], // Array of exactly 3 most impactful next steps
+  "resumeQualityBreakdown": {
+    "formatting": number,
+    "contentQuality": number,
+    "achievements": number,
+    "actionVerbs": number,
+    "readability": number,
+    "organization": number
+  },
+  "executiveSummary": string, // Professional, authoritative 2-3 paragraph summary. NO "Hey there".
+  "topStrengths": [string],
+  "requirementsComparison": [
+    {
+      "requirement": string, 
+      "status": string // EXACTLY "Strong" or "Missing"
+    }
+  ],
   "skillConcepts": [
     {
-      "category": string, // e.g., "Messaging Systems", "Backend Engineering"
+      "category": string,
       "matchPercentage": number,
-      "matchedSkills": [string], // e.g., ["Kafka", "RabbitMQ"]
+      "matchedSkills": [string],
       "missingSkills": [string]
     }
   ],
-  "insights": {
-    "strongAreas": [string],
-    "weakAreas": [string],
-    "recruiterFeedback": string // e.g., "Your resume demonstrates strong backend engineering but lacks financial systems ownership."
+  "missingSkillsImpact": {
+    "criticalGaps": [
+      {
+        "skill": string,
+        "confidence": number, // 0-100
+        "reason": string, // Why you believe it is missing based on text
+        "whyItMatters": string, // Why employers care about this skill
+        "commonUseCases": [string] // 2-4 common use cases
+      }
+    ],
+    "moderateGaps": [
+      {
+        "skill": string,
+        "confidence": number,
+        "reason": string,
+        "whyItMatters": string,
+        "commonUseCases": [string]
+      }
+    ],
+    "minorGaps": [
+      {
+        "skill": string,
+        "confidence": number,
+        "reason": string,
+        "whyItMatters": string,
+        "commonUseCases": [string]
+      }
+    ]
+  },
+  "highestRoiImprovements": [
+    {
+      "skill": string,
+      "stars": number, // 1 to 5
+      "expectedImpact": string, // "High", "Medium", or "Low"
+      "estimatedMatchImprovementRange": string, // e.g. "+8-15%"
+      "reason": string
+    }
+  ],
+  "learningPath": [string], // Ordered roadmap of 4-5 steps heavily personalized linking existing skills to new ones
+  "skillTransferability": {
+    "transferableStrengths": [string],
+    "foundationFor": [string]
   },
   "projectEvaluation": {
-    "matchStatus": string, // One of: "Strong Match", "Partial Match", "Weak Match", "No Matching Projects", "No Projects Listed"
-    "feedback": string // Detailed explanation of how well their projects align with the JD, or what is missing.
+    "matchStatus": string,
+    "feedback": string
+  },
+  "hiringRecommendation": {
+    "currentFit": string, // "Poor Fit", "Developing Fit", "Competitive", "Strong Fit", or "Excellent Fit"
+    "interviewWorthy": boolean,
+    "hiringConfidence": string, // "Low", "Medium", or "High"
+    "reason": string,
+    "gaps": [string],
+    "estimatedOnboardingTime": string
+  },
+  "similarRoles": [
+    {
+      "role": string,
+      "matchPercentage": number
+    }
+  ],
+  "estimatedCompetitiveness": {
+    "currentLevel": string, // "Low", "Moderate", "High", "Exceptional"
+    "resumeQualityPercentile": string, // e.g., "Top 25%"
+    "technicalMatchPercentile": string, // e.g., "Top 50%"
+    "atsCompatibilityPercentile": string // e.g., "Top 30%"
+  },
+  "insights": {
+    "recruiterFeedback": string
   },
   "actionableRewrites": [
     {
-      "originalText": string, // A weak bullet from their resume
-      "improvedText": string, // A metric-driven rewrite tailored to the JD
+      "originalText": string,
+      "improvedText": string,
       "reason": string
     }
-  ]
+  ],
+  "bottomLine": string,
+  "predictedImpact": {
+    "actions": [string],
+    "predictedOverallMatch": string, // "e.g., '~75-80%'"
+    "predictedInterviewProbability": string // "e.g., '~80-85%'"
+  }
 }
 
 Resume Data:
@@ -309,7 +412,7 @@ ${jobDescription}
 
 Return ONLY the JSON object.`;
 
-  const result = await runDeepSeek(prompt, 2048);
+  const result = await runDeepSeek(prompt, 8000); // Increased maxTokens due to larger output schema
   return result.replace(/^```json\s*|```$/g, "").trim();
 }
 
