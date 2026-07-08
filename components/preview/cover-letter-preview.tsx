@@ -9,6 +9,7 @@ interface CoverLetterPreviewProps {
   userName: string;
   themeFont?: string;
   themeAccent?: string;
+  type?: "standard" | "freelance";
 }
 
 const FONT_MAP: Record<string, string> = {
@@ -24,7 +25,7 @@ const COLOR_MAP: Record<string, string> = {
   black: "#18181b",
 };
 
-export function CoverLetterPreview({ body, targetRole, companyName, userName, themeFont = "inter", themeAccent = "slate" }: CoverLetterPreviewProps) {
+export function CoverLetterPreview({ body, targetRole, companyName, userName, themeFont = "inter", themeAccent = "slate", type = "standard" }: CoverLetterPreviewProps) {
   const fontFamily = FONT_MAP[themeFont] || FONT_MAP.inter;
   const accentColor = COLOR_MAP[themeAccent] || COLOR_MAP.slate;
 
@@ -40,17 +41,19 @@ export function CoverLetterPreview({ body, targetRole, companyName, userName, th
               <div className="px-[22mm] py-[20mm] print:p-0">
                 <div className="mb-5"><p className="text-[12pt] leading-[1.4] text-zinc-700">{today}</p></div>
                 {(targetRole || companyName) && (<div className="mb-5"><p className="text-[12pt] leading-[1.4] text-zinc-700">{companyName && <span>{companyName}</span>}{companyName && targetRole && <span> — </span>}{targetRole && <span>{targetRole}</span>}</p></div>)}
-                <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-3">Dear Hiring Manager,</p>
+                {type === "standard" && <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-3">Dear Hiring Manager,</p>}
                 {body ? (
                   <div className="text-[12pt] leading-[1.5] text-zinc-700 space-y-3 mb-0">{body.split("\n\n").map((p, i) => <p key={i}>{p.trim()}</p>)}</div>
                 ) : (
                   <div className="text-[12pt] leading-[1.5] text-zinc-400 space-y-3 mb-0 italic"><p>Enter your details and click &quot;Generate Cover Letter&quot; to create a tailored, AI-powered cover letter.</p></div>
                 )}
-                <div className="mt-8">
-                  <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-4">Sincerely,</p>
-                  <p className="text-[12pt] leading-[1.4] font-semibold" style={{ color: accentColor }}>{userName || "Your Name"}</p>
-                  {targetRole && (<p className="text-[10pt] text-zinc-600 mt-0.5">{targetRole}</p>)}
-                </div>
+                {type === "standard" && (
+                  <div className="mt-8">
+                    <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-4">Sincerely,</p>
+                    <p className="text-[12pt] leading-[1.4] font-semibold" style={{ color: accentColor }}>{userName || "Your Name"}</p>
+                    {targetRole && (<p className="text-[10pt] text-zinc-600 mt-0.5">{targetRole}</p>)}
+                  </div>
+                )}
               </div>
             </td>
           </tr>

@@ -106,7 +106,15 @@ function ResumeBuilderInner() {
   const [coverCompanyName, setCoverCompanyName] = useState("");
   const [coverUserName, setCoverUserName] = useState("");
   const [coverSkills, setCoverSkills] = useState<string[]>([]);
-  const [coverUseResumeData, setCoverUseResumeData] = useState(false);
+  const [coverUseResume, setCoverUseResume] = useState(false);
+  const [coverType, setCoverType] = useState<"standard" | "freelance">("standard");
+  const [freelanceGigTitle, setFreelanceGigTitle] = useState("");
+  const [freelanceJD, setFreelanceJD] = useState("");
+  const [freelanceApproach, setFreelanceApproach] = useState("");
+  const [freelanceSimilarProject, setFreelanceSimilarProject] = useState("");
+  const [freelancePortfolio, setFreelancePortfolio] = useState("");
+  const [freelanceTurnaround, setFreelanceTurnaround] = useState("");
+
   const [copied, setCopied] = useState(false);
   const [shortening, setShortening] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -153,7 +161,6 @@ function ResumeBuilderInner() {
     check(); 
     window.addEventListener("resize", check); 
     
-    // Load dashboard history
     try {
       const stored = localStorage.getItem("ascent_interview_history");
       if (stored) setDashboardHistory(JSON.parse(stored));
@@ -207,8 +214,65 @@ function ResumeBuilderInner() {
   const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { } };
   const handleDelete = () => { setCoverBody(""); setCoverTargetRole(""); setCoverCompanyName(""); setCoverUserName(""); setCoverSkills([]); };
   const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody, turnstileToken || undefined)); setSessionVerified(); } catch(e:any) { handleUnauthorized(e); } finally { setShortening(false); } };
-  const handleCoverGenerate = (body: string, tRole: string, cName: string, uName: string, sk: string[], ud: boolean = false) => { setCoverBody(body); setCoverTargetRole(tRole); setCoverCompanyName(cName); setCoverUserName(uName); setCoverSkills(sk); setCoverUseResumeData(ud); };
-  const handleRegenerate = async () => { if (!coverTargetRole || !coverCompanyName || !coverUserName) return; setRegenerating(true); try { setCoverBody(await generateCoverLetter(coverUserName, coverTargetRole, coverCompanyName, coverSkills, "", turnstileToken || undefined)); setSessionVerified(); } catch(e:any) { handleUnauthorized(e); } finally { setRegenerating(false); } };
+  const handleCoverLetterGenerate = (
+    body: string, 
+    targetRole: string, 
+    companyName: string, 
+    userName: string, 
+    skills: string[], 
+    useResumeData: boolean,
+    type: "standard" | "freelance" = "standard",
+    freelanceData?: { gigTitle: string, jd: string, approach: string, similarProject: string, portfolio: string, turnaround: string }
+  ) => {
+    setCoverBody(body);
+    setCoverTargetRole(targetRole);
+    setCoverCompanyName(companyName);
+    setCoverUserName(userName);
+    setCoverSkills(skills);
+    setCoverUseResume(useResumeData);
+    setCoverType(type);
+    if (freelanceData) {
+      setFreelanceGigTitle(freelanceData.gigTitle);
+      setFreelanceJD(freelanceData.jd);
+      setFreelanceApproach(freelanceData.approach);
+      setFreelanceSimilarProject(freelanceData.similarProject);
+      setFreelancePortfolio(freelanceData.portfolio);
+      setFreelanceTurnaround(freelanceData.turnaround);
+    }
+    if (isMobile) setCoverView("preview");
+  };
+  const handleRegenerate = async () => { if (!coverTargetRole || !coverCompanyName || !coverUserName) return; setRegenerating(true); try {
+      let bg = "";
+      if (coverUseResume) {
+        const parts: string[] = [];
+        if (data.personalInfo.summary) parts.push(`Summary: ${data.personalInfo.summary}`);
+        data.experience.forEach((exp) => { parts.push(`Experience at ${exp.company} as ${exp.role}: ${exp.bullets.replace(/\n/g, " | ")}`); });
+        data.education.forEach((edu) => { parts.push(`Education: ${edu.degree} in ${edu.field} from ${edu.school}`); });
+        data.skills.forEach((sk) => { parts.push(`Skills - ${sk.category}: ${sk.skills}`); });
+        data.projects.forEach((proj) => { parts.push(`Project: ${proj.name} - ${proj.bullets.replace(/\n/g, " | ")}`); });
+        bg = parts.join("\n");
+      }
+      let newBody = "";
+      if (coverType === "freelance") {
+        const { generateFreelanceProposal } = await import("@/app/actions/resume-ai");
+        newBody = await generateFreelanceProposal(
+          coverUserName,
+          freelanceGigTitle,
+          freelanceJD,
+          freelanceApproach,
+          freelanceSimilarProject,
+          freelancePortfolio,
+          freelanceTurnaround,
+          bg,
+          turnstileToken || undefined
+        );
+      } else {
+        const { generateCoverLetter } = await import("@/app/actions/resume-ai");
+        newBody = await generateCoverLetter(coverUserName, coverTargetRole, coverCompanyName, coverSkills, bg, turnstileToken || undefined);
+      }
+      setCoverBody(newBody);
+      setSessionVerified();
+    } catch(e:any) { handleUnauthorized(e); } finally { setRegenerating(false); } };
   const handlePaste = async () => {
     if (!pasteRaw.trim()) return;
     setPasteLoading(true);
@@ -609,11 +673,10 @@ function ResumeBuilderInner() {
 
   const resumeEl = <ResumePreview themeFont={themeFont} themeAccent={themeAccent} />;
   const atsEl = <AtsPreview atsResult={atsResult} atsRole={atsRole} atsCompany={atsCompany} themeFont={themeFont} themeAccent={themeAccent} />;
-  const coverEl = <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} />;
+  const coverEl = <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} />;
   const intEl = <InterviewPreview content={intContent} mockReport={intMode === "mock" && mockStatus === "completed" ? mockReport : undefined} mockMessages={intMode === "mock" && mockStatus === "completed" ? mockMessages : undefined} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const ap = isRes ? (isAts ? atsEl : resumeEl) : isCov ? coverEl : intEl;
 
-  // ---- Left pane content (flat function, no IIFE) ----
   function renderLeftPane() {
     if (isRes && isAts) {
       return (
@@ -875,7 +938,7 @@ function ResumeBuilderInner() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 {atsResult.skillTransferability && (
                   <Card className="border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/50 dark:bg-emerald-900/10">
-                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-emerald-700 dark:text-emerald-400"><Sparkles className="h-4 w-4" /> Skill Transferability</CardTitle></CardHeader>
+                    <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-emerald-700 dark:emerald-400"><Sparkles className="h-4 w-4" /> Skill Transferability</CardTitle></CardHeader>
                     <CardContent className="px-4 pb-4 space-y-3">
                       <div>
                         <div className="text-[10px] font-bold text-emerald-800 uppercase mb-1">Transferable Strengths</div>
@@ -1211,7 +1274,7 @@ function ResumeBuilderInner() {
     }
 
     if (isCov && (isEdit || !isMobile)) {
-      return <CoverLetterBuilder onGenerate={handleCoverGenerate} />;
+      return <CoverLetterBuilder onGenerate={handleCoverLetterGenerate} />;
     }
 
     if (isCov && !isEdit && isMobile) {
@@ -1308,9 +1371,8 @@ function ResumeBuilderInner() {
             </div>
           )}
           <div className="flex-1 overflow-y-auto p-3 md:p-5">{renderLeftPane()}</div>
-          {/*<footer className="shrink-0 px-4 md:px-5 py-2.5 md:py-3 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-3"><p className="text-[10px] md:text-[11px] text-zinc-400 dark:text-zinc-500">Powered by DeepSeek AI</p><a href="https://github.com/0x3rn/Ascent" target="_blank" rel="noopener noreferrer" className="ml-auto text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4" /></a></footer> */}
         </aside>
-        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{coverEl}</div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
+        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]"><CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} /></div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
       </div>
     </>
   );
