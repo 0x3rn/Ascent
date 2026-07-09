@@ -415,6 +415,14 @@ function ResumeBuilderInner() {
   };
 
   const handleFinishMock = async (currentMsgs: any[]) => {
+    // Abort and just reset if the user hasn't answered anything.
+    const userAnswers = currentMsgs.filter(m => m.role === "user");
+    if (userAnswers.length === 0) {
+      setMockStatus("setup");
+      setMockMessages([]);
+      return;
+    }
+
     setMockLoading(true);
     try {
       const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
