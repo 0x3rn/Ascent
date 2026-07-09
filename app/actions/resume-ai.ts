@@ -734,7 +734,7 @@ Candidate's Latest Answer:
 "${currentAnswer}"
 
 Task:
-1. Evaluate the answer (Score 1-10, Strengths, Weaknesses, Suggested Better Answer). Format this as Markdown.
+1. Evaluate the answer (Score 0-100 percentage scale, Strengths, Weaknesses, Suggested Better Answer). Format this as Markdown.
 2. Determine if the interview should end (has it reached ~10 questions and natural conclusion?).
 3. If not ending, generate the next interview question.
 
@@ -762,6 +762,10 @@ export async function generateMockInterviewReport(chatHistory: any[], resumeData
   const prompt = `You are an elite Interviewer. The mock interview for ${targetRole} at ${companyName} has concluded.
 Generate the final comprehensive report based on the candidate's performance.
 
+IMPORTANT: The candidate may have ended the interview prematurely before answering a full set of questions. 
+- Base your assessment ONLY on the questions the candidate actually answered.
+- If they ended it very early, DO NOT invent grades for topics they didn't cover. Instead, explicitly note in the "studyPlanMarkdown" and "weakestAreas" that the interview was ended prematurely, which limits the scope of the assessment.
+
 Candidate Resume:
 ${resumeData}
 
@@ -771,9 +775,9 @@ ${historyStr}
 CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 {
   "success": true,
-  "overallScore": number,
+  "overallScore": number, // A strict 0-100 percentage score representing their overall performance
   "categoryScores": [
-    { "category": string, "score": number }
+    { "category": string, "score": number } // Each category score MUST also be a strict 0-100 percentage score
   ],
   "strongestAnswers": [
     { "topic": string, "feedback": string }
