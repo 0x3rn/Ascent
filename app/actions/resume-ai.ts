@@ -68,7 +68,8 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - NEVER say things like "Sure!", "Here you go:", "I've enhanced...", or anything similar.
 - NEVER wrap your response in quotes or markdown code fences.
 - CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
-- Return ONLY the raw text content that belongs in the resume field.`;
+- Return ONLY the raw text content that belongs in the resume field.
+- NEVER invent improvement metrics or about the projects unless it is provided by the user.`;
 
 async function runDeepSeek(prompt: string, maxTokens: number = 2048): Promise<string> {
   const openai = getClient();
