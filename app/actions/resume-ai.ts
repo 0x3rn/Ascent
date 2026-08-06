@@ -73,7 +73,7 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 async function runDeepSeek(prompt: string, maxTokens: number = 2048): Promise<string> {
   const openai = getClient();
   const response = await openai.chat.completions.create({
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     messages: [
       { role: "system", content: STRICT_SYSTEM_PROMPT },
       { role: "user", content: prompt },
