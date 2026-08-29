@@ -50,7 +50,7 @@ A premium, production-ready career toolkit that combines live A4 previews with A
 | Styling | Tailwind CSS v4 |
 | Components | shadcn/ui + Lucide React |
 | State | React Context + useReducer |
-| AI | DeepSeek (via OpenAI-compatible SDK) |
+| AI | Gemini on Google Vertex AI (via OpenAI-compatible SDK) |
 | Markdown | marked |
 | PDF | react-to-print |
 | Theme | next-themes |
@@ -59,8 +59,9 @@ A premium, production-ready career toolkit that combines live A4 previews with A
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- A [DeepSeek API key](https://platform.deepseek.com/api_keys)
+- Node.js 22+
+- A Google Cloud project with Vertex AI enabled
+- A service account permitted to use Vertex AI
 
 ### Installation
 
@@ -81,7 +82,8 @@ cp .env.local.example .env.local
 Edit `.env.local`:
 
 ```
-DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+GOOGLE_CLOUD_PROJECT=your-google-cloud-project-id
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"your-google-cloud-project-id","private_key":"your-private-key","client_email":"service-account@your-google-cloud-project-id.iam.gserviceaccount.com"}
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-site-key-here
 TURNSTILE_SECRET_KEY=your-secret-key-here
 ```

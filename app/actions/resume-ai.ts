@@ -1,6 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
+import { GoogleAuth } from "google-auth-library";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
@@ -52,14 +53,48 @@ async function verifyTurnstileSession(token?: string) {
   throw new Error(`Unauthorized: Turnstile verification failed. Reason: ${codes}`);
 }
 
-function getClient() {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    throw new Error("DEEPSEEK_API_KEY environment variable is not set");
+// DEEPSEEK - DISABLED FOR NOW
+
+// function getDeepSeek() {
+//   return new OpenAI({
+//     apiKey: process.env.DEEPSEEK_API_KEY,
+//     baseURL: "https://api.deepseek.com",
+//   });
+// }
+
+// GOOGLE VERTEX AI / GEMINI
+
+async function getGemini() {
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+
+  if (!projectId) {
+    throw new Error("GOOGLE_CLOUD_PROJECT is not configured.");
   }
+
+  if (!credentialsJson) {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not configured.");
+  }
+
+  const credentials = JSON.parse(credentialsJson);
+
+  const auth = new GoogleAuth({
+    credentials,
+    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+  });
+
+  const client = await auth.getClient();
+  const accessToken = await client.getAccessToken();
+
+  if (!accessToken.token) {
+    throw new Error("Unable to obtain Google Cloud access token.");
+  }
+
   return new OpenAI({
-    baseURL: "https://api.deepseek.com",
-    apiKey,
+    apiKey: accessToken.token,
+    baseURL:
+      `https://aiplatform.googleapis.com/v1/` +
+      `projects/${projectId}/locations/global/endpoints/openapi`,
   });
 }
 
@@ -71,10 +106,10 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - Return ONLY the raw text content that belongs in the resume field.
 - NEVER invent improvement metrics or about the projects unless it is provided by the user.`;
 
-async function runDeepSeek(prompt: string, maxTokens: number = 2048): Promise<string> {
-  const openai = getClient();
-  const response = await openai.chat.completions.create({
-    model: "deepseek-v4-pro",
+async function runGemini(prompt: string, maxTokens: number = 2048): Promise<string> {
+  const gemini = await getGemini();
+  const response = await gemini.chat.completions.create({
+    model: "google/gemini-3.1-pro-preview",
     messages: [
       { role: "system", content: STRICT_SYSTEM_PROMPT },
       { role: "user", content: prompt },
@@ -95,7 +130,7 @@ If the input lacks metrics, infer reasonable ones based on the context.
 Input: "${bulletText}"
 
 Return ONLY the rewritten bullet point. Do not add bullet characters unless the input had one.`;
-  return runDeepSeek(prompt);
+  return runGemini(prompt);
 }
 
 export async function tailorToJob(
@@ -119,7 +154,7 @@ ${jobDescription}
 Your task: Rewrite each bullet point to naturally incorporate relevant keywords and phrases from the job description. Keep the original structure and order. Use strong action verbs and metrics where possible. Do NOT fabricate entirely new experiences.
 
 Return ONLY the rewritten bullet points, maintaining the same bullet format (one per line with the same bullet character). Do NOT add or remove bullets. Return EXACTLY the same number of bullets as the input.`;
-  return runDeepSeek(prompt);
+  return runGemini(prompt);
 }
 
 export async function fixGrammar(bulletText: string, turnstileToken?: string): Promise<string> {
@@ -129,7 +164,7 @@ export async function fixGrammar(bulletText: string, turnstileToken?: string): P
 Input: "${bulletText}"
 
 Return ONLY the corrected text.`;
-  return runDeepSeek(prompt);
+  return runGemini(prompt);
 }
 
 export async function enhanceSummary(summary: string, turnstileToken?: string): Promise<string> {
@@ -139,7 +174,7 @@ export async function enhanceSummary(summary: string, turnstileToken?: string): 
 Input: "${summary}"
 
 Return ONLY the rewritten summary. No preamble, no closing remarks.`;
-  return runDeepSeek(prompt);
+  return runGemini(prompt);
 }
 
 export async function generateCoverLetter(
@@ -172,7 +207,7 @@ ${
 
 Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off — just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
 
-  return runDeepSeek(prompt, 1024);
+  return runGemini(prompt, 1024);
 }
 
 export async function shortenCoverLetter(currentText: string, turnstileToken?: string): Promise<string> {
@@ -189,7 +224,7 @@ ${currentText}
 Return ONLY the shortened cover letter body text. Each paragraph separated by a blank line. No conversational filler.`;
 
   const maxTokens: number = currentText.length > 200 ? 512 : 256;
-  return runDeepSeek(prompt, maxTokens);
+  return runGemini(prompt, maxTokens);
 }
 
 export async function generateFreelanceProposal(
@@ -241,7 +276,7 @@ CRITICAL ANTI-HALLUCINATION RULES:
 
 Return ONLY the raw proposal text. No markdown code blocks, no conversational filler.`;
 
-  return runDeepSeek(prompt, 1024);
+  return runGemini(prompt, 1024);
 }
 
 // ---- SMART PASTE ----
@@ -295,7 +330,7 @@ ${rawText}
 
 Return ONLY the JSON object. No markdown code fences, no conversational text.`;
 
-  const result = await runDeepSeek(prompt, 2048);
+  const result = await runGemini(prompt, 2048);
   // Strip any markdown code fences if the AI wrapped it
   return result.replace(/^```json\s*|```$/g, "").trim();
 }
@@ -467,7 +502,7 @@ ${jobDescription}
 
 Return ONLY the JSON object.`;
 
-  const result = await runDeepSeek(prompt, 8000); // Increased maxTokens due to larger output schema
+  const result = await runGemini(prompt, 8000); // Increased maxTokens due to larger output schema
   return result.replace(/^```json\s*|```$/g, "").trim();
 }
 
@@ -679,7 +714,7 @@ Professional
 
 CRITICAL: Return Markdown format only. No conversational filler or wrapping text.`;
 
-  return runDeepSeek(prompt, 3000);
+  return runGemini(prompt, 3000);
 }
 
 
@@ -709,7 +744,7 @@ CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 }`;
 
   try {
-    const result = await runDeepSeek(prompt, 2048);
+    const result = await runGemini(prompt, 2048);
     const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
     return JSON.parse(jsonStr);
   } catch (error: any) {
@@ -748,7 +783,7 @@ CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 }`;
 
   try {
-    const result = await runDeepSeek(prompt, 2048);
+    const result = await runGemini(prompt, 2048);
     const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
     return JSON.parse(jsonStr);
   } catch (error: any) {
@@ -791,7 +826,7 @@ CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 }`;
 
   try {
-    const result = await runDeepSeek(prompt, 3000);
+    const result = await runGemini(prompt, 3000);
     const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
     return JSON.parse(jsonStr);
   } catch (error: any) {
