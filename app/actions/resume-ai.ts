@@ -2,56 +2,7 @@
 
 import OpenAI from "openai";
 import { GoogleAuth } from "google-auth-library";
-import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
-
-async function verifyTurnstileSession(token?: string) {
-  console.log("--- TURNSTILE VERIFICATION ---");
-  console.log("Received token length:", token ? token.length : "undefined");
-  const cookieStore = await cookies();
-  const sessionVerified = cookieStore.get("ascent_session_verified");
-  console.log("Cookie ascent_session_verified:", sessionVerified?.value);
-
-  if (sessionVerified?.value === "true") {
-    console.log("Session cookie is valid. Bypassing token check.");
-    return true;
-  }
-
-  if (!token) {
-    console.error("Token is undefined or empty!");
-    throw new Error("Unauthorized: Turnstile token required");
-  }
-
-  const secretKey = process.env.TURNSTILE_SECRET_KEY || "1x0000000000000000000000000000000AA";
-  if (!secretKey) {
-    throw new Error("Server configuration error: Turnstile secret missing");
-  }
-
-  const formData = new URLSearchParams();
-  formData.append("secret", secretKey);
-  formData.append("response", token);
-
-  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    body: formData,
-  });
-
-  const outcome = await res.json();
-  if (outcome.success) {
-    cookieStore.set("ascent_session_verified", "true", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 3600,
-      path: "/",
-      sameSite: "lax",
-    });
-    revalidatePath("/");
-    return true;
-  }
-
-  const codes = outcome["error-codes"] ? outcome["error-codes"].join(", ") : "Unknown";
-  throw new Error(`Unauthorized: Turnstile verification failed. Reason: ${codes}`);
-}
+import { verifyTurnstileSession } from "@/lib/turnstile";
 
 // DEEPSEEK - DISABLED FOR NOW
 
