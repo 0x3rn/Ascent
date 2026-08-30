@@ -60,7 +60,7 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 async function runGemini(prompt: string, maxTokens: number = 2048): Promise<string> {
   const gemini = await getGemini();
   const response = await gemini.chat.completions.create({
-    model: "google/gemini-3.1-pro-preview",
+    model: "google/gemini-3.7-flash",
     messages: [
       { role: "system", content: STRICT_SYSTEM_PROMPT },
       { role: "user", content: prompt },
