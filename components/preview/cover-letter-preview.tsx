@@ -40,7 +40,7 @@ export function CoverLetterPreview({ body, targetRole, companyName, userName, th
             <td className="border-0 p-0 m-0 align-top print:px-[20mm]">
               <div className="px-[22mm] py-[20mm] print:p-0">
                 <div className="mb-5"><p className="text-[12pt] leading-[1.4] text-zinc-700">{today}</p></div>
-                {(targetRole || companyName) && (<div className="mb-5"><p className="text-[12pt] leading-[1.4] text-zinc-700">{companyName && <span>{companyName}</span>}{companyName && targetRole && <span> — </span>}{targetRole && <span>{targetRole}</span>}</p></div>)}
+                {(targetRole || companyName) && (<div className="mb-5"><p className="text-[12pt] leading-[1.4] text-zinc-700">{companyName && <span>{companyName}</span>}{companyName && targetRole && <span> / </span>}{targetRole && <span>{targetRole}</span>}</p></div>)}
                 {type === "standard" && <p className="text-[12pt] leading-[1.4] text-zinc-900 mb-3">Dear Hiring Manager,</p>}
                 {body ? (
                   <div className="text-[12pt] leading-[1.5] text-zinc-700 space-y-3 mb-0">{body.split("\n\n").map((p, i) => <p key={i}>{p.trim()}</p>)}</div>

@@ -1,46 +1,46 @@
-# Ascent — AI-Powered Career Toolkit
+# Ascent - AI-Powered Career Toolkit
 
 A premium, production-ready career toolkit that combines live A4 previews with AI-powered writing assistance across resumes, cover letters, and interview preparation. Built with Next.js 16 (App Router), Tailwind CSS v4, and DeepSeek AI.
 
 ## Features
 
 ### Resume Builder
-- **Live A4 Preview** — Real-time split-screen workspace: edit on the left, see your resume update on the right
-- **AI-Powered Writing** — Enhance bullet points, fix grammar, and tailor experience to specific job descriptions
-- **Smart Paste (Magic Import)** — Paste raw LinkedIn text or old resumes; AI extracts and populates all form fields
-- **ATS Matcher** — Paste a job description and get an ATS compatibility score, missing keywords, and actionable tips
-- **Projects Section** — Dedicated section for GitHub projects with name, link, skills, and bullet points
-- **PDF Export** — One-click A4 PDF download with print-optimized CSS and multi-page support
-- **Markdown Support** — Summary and bullet points support Markdown formatting
+- **Live A4 Preview:** Real-time split-screen workspace: edit on the left, see your resume update on the right
+- **AI-Powered Writing:** Enhance bullet points, fix grammar, and tailor experience to specific job descriptions
+- **Smart Paste (Magic Import):** Paste raw LinkedIn text or old resumes; AI extracts and populates all form fields
+- **ATS Matcher:** Paste a job description and get an ATS compatibility score, missing keywords, and actionable tips
+- **Projects Section:** Dedicated section for GitHub projects with name, link, skills, and bullet points
+- **PDF Export:** One-click A4 PDF download with print-optimized CSS and multi-page support
+- **Markdown Support:** Summary and bullet points support Markdown formatting
 
 ### Cover Letter Builder
-- **AI-Generated Letters** — Enter target role and company; AI crafts a tailored 3-4 paragraph cover letter
-- **Sandbox Toggle** — Option to include your resume data as context, or generate a generalized letter
-- **Skills Input** — Add up to 5 custom skills as pill badges for the AI to weave into the letter
-- **Action Toolbar** — Copy Text, Shorten, Regenerate, Delete, and Download PDF
-- **Business Letter Format** — Date, recipient, salutation, body paragraphs, and sign-off in standard format
+- **AI-Generated Letters:** Enter target role and company; AI crafts a tailored 3-4 paragraph cover letter
+- **Sandbox Toggle:** Option to include your resume data as context, or generate a generalized letter
+- **Skills Input:** Add up to 5 custom skills as pill badges for the AI to weave into the letter
+- **Action Toolbar:** Copy Text, Shorten, Regenerate, Delete, and Download PDF
+- **Business Letter Format:** Date, recipient, salutation, body paragraphs, and sign-off in standard format
 
 ### Interview Builder
-- **Prep Guide Generator** — Generate tailored behavioral/technical interview questions with STAR answer outlines
-- **Live Mock Interview** — Interactive AI chatbot that conducts a realistic mock interview based on your background and target role
-- **Performance Report** — Get scored out of 100 on your mock interview with detailed feedback on your answers and areas for improvement
-- **Export Ready** — Copy to clipboard or download your entire interview transcript and report as a beautifully formatted PDF
+- **Prep Guide Generator:** Generate tailored behavioral/technical interview questions with STAR answer outlines
+- **Live Mock Interview:** Interactive AI chatbot that conducts a realistic mock interview based on your background and target role
+- **Performance Report:** Get scored out of 100 on your mock interview with detailed feedback on your answers and areas for improvement
+- **Export Ready:** Copy to clipboard or download your entire interview transcript and report as a beautifully formatted PDF
 
 ### Theme & Customization
-- **Font Switcher** — Inter (Modern), Lora (Classic), Geist Mono (Tech) — affects all document previews
-- **Accent Colors** — Slate, Navy, Forest — applied to name headings and section borders
-- **Dark/Light Mode** — "Midnight & Frost" premium palette with Indigo accent and butter-smooth transitions
-- **Zero FOUC** — next-themes with `suppressHydrationWarning` and `disableTransitionOnChange` prevents any flash
+- **Font Switcher:** Inter (Modern), Lora (Classic), Geist Mono (Tech); affects all document previews
+- **Accent Colors:** Slate, Navy, Forest; applied to name headings and section borders
+- **Dark/Light Mode:** "Midnight & Frost" premium palette with Indigo accent and butter-smooth transitions
+- **Zero FOUC:** next-themes with `suppressHydrationWarning` and `disableTransitionOnChange` prevents any flash
 
 ### Print & PDF
-- **A4 Export** — All documents export as perfect A4 pages with 210mm width
-- **Safari Fixes** — Table print hack ensures consistent margins on every page, even when content flows to page 2+
-- **Mobile Parity** — Print output is identical whether on desktop or mobile (strict 210mm width enforced)
-- **Cross-Bleeding Prevention** — Only the active document prints; builder UI is hidden via `print:hidden`
+- **A4 Export:** All documents export as perfect A4 pages with 210mm width
+- **Safari Fixes:** Table print hack ensures consistent margins on every page, even when content flows to page 2+
+- **Mobile Parity:** Print output is identical whether on desktop or mobile (strict 210mm width enforced)
+- **Cross-Bleeding Prevention:** Only the active document prints; builder UI is hidden via `print:hidden`
 
 ### Security
-- **Cloudflare Turnstile** — Enterprise-grade bot protection integrated across all AI endpoints
-- **Session Cookies** — Secure, seamless verification bypassing repeated CAPTCHAs during active sessions
+- **Cloudflare Turnstile:** Enterprise-grade bot protection integrated across all AI endpoints
+- **Session Cookies:** Secure, seamless verification bypassing repeated CAPTCHAs during active sessions
 
 ## Tech Stack
 

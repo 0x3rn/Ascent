@@ -53,7 +53,7 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - NEVER include any conversational preamble, greeting, or closing.
 - NEVER say things like "Sure!", "Here you go:", "I've enhanced...", or anything similar.
 - NEVER wrap your response in quotes or markdown code fences.
-- CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
+- CRITICAL: DO NOT use em dashes under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
 - Return ONLY the raw text content that belongs in the resume field.
 - NEVER invent improvement metrics or about the projects unless it is provided by the user.`;
 
@@ -69,7 +69,7 @@ async function runGemini(prompt: string, maxTokens: number = 2048): Promise<stri
     max_tokens: maxTokens,
   });
   const text = response.choices[0]?.message?.content?.trim() ?? "";
-  return text.replace(/—/g, "-").replace(/\u2014/g, "-");
+  return text.replace(/\u2014/g, "-");
 }
 
 export async function enhanceBulletPoint(bulletText: string, turnstileToken?: string): Promise<string> {
@@ -148,7 +148,7 @@ Use strong industry buzzwords and impactful action verbs, but the overall tone M
 
 Do NOT use generic AI cliches like "delve", "testament", "tapestry", or "thrilled to apply".
 
-CRITICAL: DO NOT use em-dashes (—) under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.${skillsLine}
+CRITICAL: DO NOT use em dashes under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.${skillsLine}
 
 ${
   hasBackground
@@ -156,7 +156,7 @@ ${
     : `\nSince no resume background is provided, write a highly professional, generalized cover letter based solely on the target role and company. Focus on the value the candidate would bring to ${companyName} as a ${targetRole}.`
 }
 
-Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off — just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
+Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off; just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
 
   return runGemini(prompt, 1024);
 }
@@ -217,7 +217,7 @@ STRICT RULES:
 5. If the user provides a "Similar Past Project", you MUST weave it naturally into the proposal. Dedicate a sentence to drawing a direct parallel between that past work and the client's current needs to establish immediate authority and trust. Show the client we've already successfully solved this exact problem.
 6. If a "Portfolio Link" or "Turnaround Time" is provided, include them naturally as proof of competence and readiness.
 7. End with a soft, confident Call to Action (e.g., "Let's hop on a quick chat to discuss the architecture.").
-8. Absolutely no em-dashes (—). No AI buzzwords like 'delve', 'tapestry', or 'testament'. Sound like a confident, human expert.
+8. Absolutely no em dashes. No AI buzzwords like 'delve', 'tapestry', or 'testament'. Sound like a confident, human expert.
 
 CRITICAL ANTI-HALLUCINATION RULES:
 1. DO NOT lie or invent past experiences, projects, or case studies. 
