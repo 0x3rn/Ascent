@@ -2,11 +2,15 @@
 
 import React from "react";
 import { marked } from "marked";
+import type {
+  MockInterviewMessage,
+  MockInterviewReport,
+} from "@/lib/mock-interview";
 
 interface InterviewPreviewProps {
   content: string;
-  mockReport?: any;
-  mockMessages?: any[];
+  mockReport?: MockInterviewReport;
+  mockMessages?: MockInterviewMessage[];
   targetRole: string;
   companyName: string;
   themeFont: string;
@@ -64,7 +68,7 @@ export function InterviewPreview({ content, mockReport, mockMessages, targetRole
                     <div>
                       <h2 className="text-[14pt] font-semibold mb-3 text-zinc-900 border-b border-zinc-200 pb-2">Category Scores</h2>
                       <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                        {mockReport.categoryScores?.map((cs: any, i: number) => (
+                        {mockReport.categoryScores?.map((cs, i) => (
                           <div key={i} className="flex justify-between items-center border-b border-zinc-100 pb-1">
                             <span className="font-medium text-zinc-700">{cs.category}</span>
                             <span className="font-bold text-zinc-900">{cs.score}%</span>
@@ -72,6 +76,20 @@ export function InterviewPreview({ content, mockReport, mockMessages, targetRole
                         ))}
                       </div>
                     </div>
+
+                    {mockReport.strongestAnswers && mockReport.strongestAnswers.length > 0 && (
+                      <div>
+                        <h2 className="text-[14pt] font-semibold mb-3 text-zinc-900 border-b border-zinc-200 pb-2">Strongest Answers</h2>
+                        <div className="space-y-3">
+                          {mockReport.strongestAnswers.map((answer, i) => (
+                            <div key={i} className="border-l-2 pl-3" style={{ borderLeftColor: accentColor }}>
+                              <h3 className="text-[11pt] font-semibold text-zinc-900">{answer.topic}</h3>
+                              <p className="text-[10.5pt] leading-[1.5] text-zinc-700">{answer.feedback}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {mockReport.weakestAreas && mockReport.weakestAreas.length > 0 && (
                       <div>

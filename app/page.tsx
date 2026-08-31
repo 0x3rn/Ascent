@@ -28,6 +28,12 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTurnstile } from "@/components/turnstile-provider";
+import { applyInterviewScoreAudits } from "@/lib/mock-interview";
+import type {
+  MockInterviewHistoryRecord,
+  MockInterviewMessage,
+  MockInterviewReport,
+} from "@/lib/mock-interview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,12 +132,12 @@ function ResumeBuilderInner() {
   const [intCopied, setIntCopied] = useState(false);
 
   const [intMode, setIntMode] = useState<"prep" | "mock" | "dashboard">("prep");
-  const [mockMessages, setMockMessages] = useState<{ role: "user" | "ai", content: string, feedback?: string }[]>([]);
+  const [mockMessages, setMockMessages] = useState<MockInterviewMessage[]>([]);
   const [mockStatus, setMockStatus] = useState<"setup" | "running" | "completed">("setup");
   const [mockInput, setMockInput] = useState("");
   const [mockLoading, setMockLoading] = useState(false);
-  const [mockReport, setMockReport] = useState<any>(null);
-  const [dashboardHistory, setDashboardHistory] = useState<any[]>([]);
+  const [mockReport, setMockReport] = useState<MockInterviewReport | null>(null);
+  const [dashboardHistory, setDashboardHistory] = useState<MockInterviewHistoryRecord[]>([]);
 
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteRaw, setPasteRaw] = useState("");
@@ -163,7 +169,9 @@ function ResumeBuilderInner() {
     
     try {
       const stored = localStorage.getItem("ascent_interview_history");
-      if (stored) setDashboardHistory(JSON.parse(stored));
+      if (stored) {
+        setDashboardHistory(JSON.parse(stored) as MockInterviewHistoryRecord[]);
+      }
       
       const storedAts = localStorage.getItem("ascent_ats_result");
       if (storedAts) setAtsResult(JSON.parse(storedAts));
@@ -397,6 +405,7 @@ function ResumeBuilderInner() {
       if (res?.success) {
         const updatedMsgs = [...newMsgs];
         updatedMsgs[updatedMsgs.length - 1].feedback = res.feedbackMarkdown;
+        updatedMsgs[updatedMsgs.length - 1].evaluation = res.evaluation;
         setSessionVerified();
         
         if (res.isInterviewComplete) {
@@ -406,6 +415,8 @@ function ResumeBuilderInner() {
           updatedMsgs.push({ role: "ai", content: res.nextQuestion });
           setMockMessages(updatedMsgs);
         }
+      } else {
+        handleUnauthorized(new Error(res.error));
       }
     } catch (e: any) {
       handleUnauthorized(e);
@@ -414,7 +425,7 @@ function ResumeBuilderInner() {
     }
   };
 
-  const handleFinishMock = async (currentMsgs: any[]) => {
+  const handleFinishMock = async (currentMsgs: MockInterviewMessage[]) => {
     // Abort and just reset if the user hasn't answered anything.
     const userAnswers = currentMsgs.filter(m => m.role === "user");
     if (userAnswers.length === 0) {
@@ -428,10 +439,13 @@ function ResumeBuilderInner() {
       const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
       const res = await generateMockInterviewReport(currentMsgs, bg, intRole, intCompany, turnstileToken || undefined);
       if (res?.success) {
+        setMockMessages(
+          applyInterviewScoreAudits(currentMsgs, res.answerAudits)
+        );
         setMockReport(res);
         setMockStatus("completed");
         
-        const newRecord = {
+        const newRecord: MockInterviewHistoryRecord = {
           date: new Date().toISOString(),
           role: intRole,
           company: intCompany,
@@ -442,6 +456,8 @@ function ResumeBuilderInner() {
         setDashboardHistory(updatedHistory);
         localStorage.setItem("ascent_interview_history", JSON.stringify(updatedHistory));
         setSessionVerified();
+      } else {
+        handleUnauthorized(new Error(res.error));
       }
     } catch (e: any) {
       handleUnauthorized(e);
@@ -527,7 +543,7 @@ function ResumeBuilderInner() {
                   <div>
                     <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Category Scores</h4>
                     <div className="grid grid-cols-2 gap-2">
-                      {mockReport.categoryScores?.map((cs: any, i: number) => (
+                      {mockReport.categoryScores?.map((cs, i) => (
                         <div key={i} className="flex flex-col justify-between bg-white dark:bg-zinc-900 p-2 rounded border border-zinc-200 dark:border-zinc-800 shadow-sm">
                           <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 break-words line-clamp-2">{cs.category}</span>
                           <span className="font-bold text-blue-600 dark:text-blue-400 mt-1">{cs.score}%</span>
@@ -602,7 +618,7 @@ function ResumeBuilderInner() {
                   <AccordionContent className="px-4 pb-4 pt-1">
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-2">
-                        {record.report?.categoryScores?.map((cs: any, j: number) => (
+                        {record.report?.categoryScores?.map((cs, j) => (
                           <div key={j} className="bg-zinc-50 dark:bg-zinc-950 p-2 rounded-lg border border-zinc-100 dark:border-zinc-800 flex flex-col justify-between">
                             <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 break-words line-clamp-2">{cs.category}</div>
                             <div className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">{cs.score}%</div>
@@ -682,7 +698,7 @@ function ResumeBuilderInner() {
   const resumeEl = <ResumePreview themeFont={themeFont} themeAccent={themeAccent} />;
   const atsEl = <AtsPreview atsResult={atsResult} atsRole={atsRole} atsCompany={atsCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const coverEl = <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} />;
-  const intEl = <InterviewPreview content={intContent} mockReport={intMode === "mock" && mockStatus === "completed" ? mockReport : undefined} mockMessages={intMode === "mock" && mockStatus === "completed" ? mockMessages : undefined} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
+  const intEl = <InterviewPreview content={intContent} mockReport={intMode === "mock" && mockStatus === "completed" ? mockReport ?? undefined : undefined} mockMessages={intMode === "mock" && mockStatus === "completed" ? mockMessages : undefined} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const ap = isRes ? (isAts ? atsEl : resumeEl) : isCov ? coverEl : intEl;
 
   function renderLeftPane() {

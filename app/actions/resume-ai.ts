@@ -3,6 +3,16 @@
 import OpenAI from "openai";
 import { GoogleAuth } from "google-auth-library";
 import { verifyTurnstileSession } from "@/lib/turnstile";
+import {
+  calculateInterviewSummary,
+  completeInterviewEvaluation,
+  parseInterviewEvaluation,
+  parseInterviewScoreAudit,
+  sanitizeInterviewHistory,
+  type MockInterviewMessage,
+  type MockInterviewReport,
+  type StrongInterviewAnswer,
+} from "@/lib/mock-interview";
 
 // DEEPSEEK - DISABLED FOR NOW
 
@@ -57,15 +67,53 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - Return ONLY the raw text content that belongs in the resume field.
 - NEVER invent improvement metrics or about the projects unless it is provided by the user.`;
 
-async function runGemini(prompt: string, maxTokens: number = 2048): Promise<string> {
+const INTERVIEW_SYSTEM_PROMPT = `You are a rigorous, calibrated career interviewer and evaluator.
+- Evaluate candidates against the target role, seniority, question, and evidence provided.
+- Apply the same scoring discipline to every career, including technical, creative, operational, commercial, legal, medical, educational, public-service, and skilled-trade roles.
+- Do not reward confidence, jargon, length, or polished structure when the underlying judgment is unsound.
+- Do not invent achievements, credentials, metrics, laws, policies, or employer practices.
+- Treat role-specific professional duties and material risks as substantive scoring issues.
+- Return only the exact format requested by the user prompt.
+- Do not use em dashes.`;
+
+const INTERVIEW_SCORING_RUBRIC = `CAREER-AGNOSTIC SCORING RUBRIC
+
+Score these five dimensions from 0 to 100:
+- relevance: Directly answers the question and covers its important parts.
+- judgment: Makes sound decisions, recognizes consequences, and applies safeguards appropriate to the profession.
+- evidence: Uses credible specifics, examples, reasoning, or outcomes without inventing facts.
+- roleCompetence: Demonstrates the knowledge and standards expected for this role and seniority.
+- communication: Communicates clearly and coherently. Style cannot compensate for incorrect judgment.
+
+Severity must be assigned before scoring:
+- none: No material flaw. Small improvements may still exist.
+- minor: A limited omission that does not undermine the central answer. Final score is capped at 89.
+- major: A central error, missing essential control, materially poor decision, unsupported claim, or failure to answer the main question. Final score is capped at 69.
+- critical: The answer endorses or normalizes conduct that violates a non-negotiable duty of the role or creates serious foreseeable harm. This includes, where relevant, unlawful or unethical conduct, patient or public safety failures, safeguarding failures, discrimination, privacy or security violations, financial-integrity failures, severe operational hazards, or a central technical falsehood with high-impact consequences. Final score is capped at 59.
+
+Apply these rules across every career. Infer the relevant non-negotiable duties from the target role instead of relying on keywords from one industry. Acknowledging a harmful decision afterward can improve reflection, but it does not erase the severity of the original judgment. Do not reward jargon, confidence, verbosity, or an impressive outcome when the method was unsound.
+
+Score bands after severity caps:
+- 90 to 100: Exceptional and ready for the target level.
+- 80 to 89: Strong, with limited non-central gaps.
+- 70 to 79: Acceptable but mixed or underdeveloped.
+- 60 to 69: Weak, with at least one major concern.
+- 0 to 59: Unacceptable, substantially incorrect, or critically unsafe.`;
+
+async function runGemini(
+  prompt: string,
+  maxTokens: number = 2048,
+  systemPrompt: string = STRICT_SYSTEM_PROMPT,
+  temperature: number = 0.4
+): Promise<string> {
   const gemini = await getGemini();
   const response = await gemini.chat.completions.create({
     model: "google/gemini-3.7-flash",
     messages: [
-      { role: "system", content: STRICT_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
     ],
-    temperature: 0.4,
+    temperature,
     max_tokens: maxTokens,
   });
   const text = response.choices[0]?.message?.content?.trim() ?? "";
@@ -671,9 +719,137 @@ CRITICAL: Return Markdown format only. No conversational filler or wrapping text
 
 // ---- MOCK INTERVIEW ACTIONS ----
 
-export async function initMockInterview(resumeData: string, targetRole: string, companyName: string, turnstileToken?: string): Promise<any> {
+type MockInterviewFailure = { success: false; error: string };
+
+type MockInterviewStartResult =
+  | {
+      success: true;
+      overviewMarkdown: string;
+      firstQuestion: string;
+    }
+  | MockInterviewFailure;
+
+type MockInterviewChatResult =
+  | {
+      success: true;
+      feedbackMarkdown: string;
+      evaluation: ReturnType<typeof completeInterviewEvaluation>;
+      nextQuestion: string;
+      isInterviewComplete: boolean;
+    }
+  | MockInterviewFailure;
+
+type MockInterviewReportResult = MockInterviewReport | MockInterviewFailure;
+
+function parseJsonObject(text: string): Record<string, unknown> {
+  const jsonText = text.replace(/^```json\s*|```$/g, "").trim();
+  const value: unknown = JSON.parse(jsonText);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("The model returned an invalid object.");
+  }
+  return value as Record<string, unknown>;
+}
+
+function readModelString(
+  record: Record<string, unknown>,
+  key: string,
+  maxLength = 12_000
+): string {
+  const value = record[key];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`The model omitted ${key}.`);
+  }
+  return value.trim().slice(0, maxLength);
+}
+
+function readModelStringArray(
+  record: Record<string, unknown>,
+  key: string,
+  maxItems = 6
+): string[] {
+  const value = record[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`The model returned an invalid ${key}.`);
+  }
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function readStrongestAnswers(
+  value: unknown,
+  answerAudits: ReturnType<typeof parseInterviewScoreAudit>[]
+): StrongInterviewAnswer[] {
+  if (!Array.isArray(value)) {
+    throw new Error("The model returned invalid strongest answers.");
+  }
+
+  return value
+    .slice(0, 4)
+    .map((item) => {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) {
+        throw new Error("The model returned an invalid strongest answer.");
+      }
+      const record = item as Record<string, unknown>;
+      const answerIndex = record.answerIndex;
+      if (
+        typeof answerIndex !== "number" ||
+        !Number.isSafeInteger(answerIndex) ||
+        answerIndex < 0 ||
+        answerIndex >= answerAudits.length
+      ) {
+        throw new Error("The model returned an invalid strongest answer index.");
+      }
+      return {
+        answerIndex,
+        topic: readModelString(record, "topic", 160),
+        feedback: readModelString(record, "feedback", 1_200),
+      };
+    })
+    .filter((answer) => {
+      const severity = answerAudits[answer.answerIndex].severity;
+      return severity === "none" || severity === "minor";
+    });
+}
+
+function readScoreAudits(value: unknown, answerCount: number) {
+  if (!Array.isArray(value) || value.length !== answerCount) {
+    throw new Error("The final score audit did not cover every answer.");
+  }
+
+  const audits = value.map(parseInterviewScoreAudit);
+  const indexes = new Set(audits.map((audit) => audit.answerIndex));
+  if (
+    indexes.size !== answerCount ||
+    audits.some((audit) => audit.answerIndex >= answerCount)
+  ) {
+    throw new Error("The final score audit contains invalid answer indexes.");
+  }
+
+  return audits.sort((a, b) => a.answerIndex - b.answerIndex);
+}
+
+function safeInterviewFailure(
+  context: string,
+  error: unknown
+): MockInterviewFailure {
+  console.error(context, error);
+  return {
+    success: false,
+    error: "We couldn't complete the interview evaluation. Please try again.",
+  };
+}
+
+export async function initMockInterview(
+  resumeData: string,
+  targetRole: string,
+  companyName: string,
+  turnstileToken?: string
+): Promise<MockInterviewStartResult> {
   await verifyTurnstileSession(turnstileToken);
-  const prompt = `You are an elite Interviewer. We are starting a mock interview.
+  const prompt = `Start a realistic mock interview.
 Target Role: ${targetRole}
 Company: ${companyName}
 
@@ -683,9 +859,11 @@ ${resumeData}
 """
 
 Task:
-1. Analyze the resume and job to form an interview plan (10 questions covering Intro, Resume Deep Dive, Technical, System Design, Behavioral, Company Fit).
-2. Generate an "Interview Overview" markdown summary.
-3. Ask the very first question (Introduction).
+1. Analyze the resume, role, seniority, and employer context to form a 10-question interview plan.
+2. Choose categories that genuinely fit this career. Do not force technical or system-design categories onto roles where they are irrelevant.
+3. Include trajectory, resume evidence, core role capabilities, professional judgment, collaboration, and motivation or values where appropriate.
+4. Generate an "Interview Overview" markdown summary.
+5. Ask the very first question (Introduction).
 
 CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 {
@@ -695,79 +873,179 @@ CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 }`;
 
   try {
-    const result = await runGemini(prompt, 2048);
-    const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
-    return JSON.parse(jsonStr);
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    const result = await runGemini(
+      prompt,
+      2048,
+      INTERVIEW_SYSTEM_PROMPT,
+      0.25
+    );
+    const parsed = parseJsonObject(result);
+    return {
+      success: true,
+      overviewMarkdown: readModelString(parsed, "overviewMarkdown"),
+      firstQuestion: readModelString(parsed, "firstQuestion", 2_000),
+    };
+  } catch (error: unknown) {
+    return safeInterviewFailure("Unable to start mock interview:", error);
   }
 }
 
-export async function chatMockInterview(chatHistory: any[], currentAnswer: string, resumeData: string, targetRole: string, companyName: string, turnstileToken?: string): Promise<any> {
+export async function chatMockInterview(
+  chatHistory: MockInterviewMessage[],
+  currentAnswer: string,
+  resumeData: string,
+  targetRole: string,
+  companyName: string,
+  turnstileToken?: string
+): Promise<MockInterviewChatResult> {
   await verifyTurnstileSession(turnstileToken);
-  const historyStr = JSON.stringify(chatHistory, null, 2);
-  
-  const prompt = `You are an elite Interviewer conducting a mock interview for a ${targetRole} at ${companyName}.
-You are currently evaluating the candidate's latest answer and deciding the next step.
-If the answer is weak, ask a follow-up. If it is strong, move to the next question category. Aim for a total of ~10 main questions.
+  const cleanHistory = sanitizeInterviewHistory(chatHistory);
+  const historyBeforeAnswer =
+    cleanHistory.at(-1)?.role === "user"
+      ? cleanHistory.slice(0, -1)
+      : cleanHistory;
+  const answeredQuestionCount = cleanHistory.filter(
+    (message) => message.role === "user"
+  ).length;
+  const historyStr = JSON.stringify(historyBeforeAnswer, null, 2);
+
+  const prompt = `Conduct and grade a mock interview for a ${targetRole} at ${companyName}.
+Evaluate the latest answer against the actual question, target role, seniority, and relevant professional standards. Then decide the next question. The candidate has answered ${answeredQuestionCount} main question(s). Aim for 10 main questions.
 
 Candidate Resume:
 ${resumeData}
 
-Chat History (Context):
+Interview History Before the Latest Answer:
 ${historyStr}
 
 Candidate's Latest Answer:
-"${currentAnswer}"
+"""
+${currentAnswer}
+"""
+
+${INTERVIEW_SCORING_RUBRIC}
 
 Task:
-1. Evaluate the answer (Score 0-100 percentage scale, Strengths, Weaknesses, Suggested Better Answer). Format this as Markdown.
-2. Determine if the interview should end (has it reached ~10 questions and natural conclusion?).
-3. If not ending, generate the next interview question.
+1. Perform a silent red-flag audit before assigning severity and dimension scores.
+2. Reuse the interview-plan category name when possible so category totals remain stable.
+3. Identify strengths, weaknesses, any critical concerns, and a better answer that does not invent candidate achievements.
+4. If the answer is weak, ask a focused follow-up when useful. Otherwise move to the next planned category.
+5. End naturally after approximately 10 main questions.
 
 CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 {
   "success": true,
-  "feedbackMarkdown": "Markdown evaluation of the candidate's latest answer",
+  "evaluation": {
+    "category": "Stable interview category name",
+    "severity": "none | minor | major | critical",
+    "dimensionScores": {
+      "relevance": 0,
+      "judgment": 0,
+      "evidence": 0,
+      "roleCompetence": 0,
+      "communication": 0
+    },
+    "strengths": ["Specific strength"],
+    "weaknesses": ["Specific weakness"],
+    "criticalConcerns": ["Critical concern, or an empty array"],
+    "suggestedBetterAnswer": "A realistic improved answer"
+  },
   "nextQuestion": "The next question to ask (or empty if complete)",
   "isInterviewComplete": boolean
 }`;
 
   try {
-    const result = await runGemini(prompt, 2048);
-    const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
-    return JSON.parse(jsonStr);
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    const result = await runGemini(
+      prompt,
+      3000,
+      INTERVIEW_SYSTEM_PROMPT,
+      0.15
+    );
+    const parsed = parseJsonObject(result);
+    const evaluation = completeInterviewEvaluation(
+      parseInterviewEvaluation(parsed.evaluation)
+    );
+    const modelComplete = parsed.isInterviewComplete === true;
+    const isInterviewComplete = answeredQuestionCount >= 10 || modelComplete;
+    const nextQuestion = isInterviewComplete
+      ? ""
+      : readModelString(parsed, "nextQuestion", 2_000);
+
+    return {
+      success: true,
+      feedbackMarkdown: evaluation.feedbackMarkdown,
+      evaluation,
+      nextQuestion,
+      isInterviewComplete,
+    };
+  } catch (error: unknown) {
+    return safeInterviewFailure("Unable to grade mock interview answer:", error);
   }
 }
 
-export async function generateMockInterviewReport(chatHistory: any[], resumeData: string, targetRole: string, companyName: string, turnstileToken?: string): Promise<any> {
+export async function generateMockInterviewReport(
+  chatHistory: MockInterviewMessage[],
+  resumeData: string,
+  targetRole: string,
+  companyName: string,
+  turnstileToken?: string
+): Promise<MockInterviewReportResult> {
   await verifyTurnstileSession(turnstileToken);
-  const historyStr = JSON.stringify(chatHistory, null, 2);
-  
-  const prompt = `You are an elite Interviewer. The mock interview for ${targetRole} at ${companyName} has concluded.
-Generate the final comprehensive report based on the candidate's performance.
+  const cleanHistory = sanitizeInterviewHistory(chatHistory);
+  const candidateAnswers = cleanHistory.filter(
+    (message) => message.role === "user"
+  );
+  const answerCount = candidateAnswers.length;
 
-IMPORTANT: The candidate may have ended the interview prematurely before answering a full set of questions. 
-- Base your assessment ONLY on the questions the candidate actually answered.
-- If they ended it very early, DO NOT invent grades for topics they didn't cover. Instead, explicitly note in the "studyPlanMarkdown" and "weakestAreas" that the interview was ended prematurely, which limits the scope of the assessment.
+  if (answerCount === 0) {
+    return {
+      success: false,
+      error: "Answer at least one interview question before generating a report.",
+    };
+  }
+
+  const historyStr = JSON.stringify(cleanHistory, null, 2);
+
+  const prompt = `Write the final report for the completed mock interview for ${targetRole} at ${companyName}.
+
+Independently audit every answer from the raw transcript. Do not use, preserve, or infer any score from earlier interviewer feedback. The application will calculate all final numeric scores from your audited dimension scores and severity classifications.
+
+The candidate answered ${answerCount} question(s). Base every conclusion only on questions actually answered. If coverage was limited, state that clearly without inventing performance in untested areas.
 
 Candidate Resume:
 ${resumeData}
 
-Chat History:
+Raw Question and Answer History:
 ${historyStr}
+
+${INTERVIEW_SCORING_RUBRIC}
+
+Task:
+1. Independently assign a zero-based answerIndex, stable category, severity, and five dimension scores to every candidate answer.
+2. Select up to three genuinely strongest answers. Do not select an answer audited as major or critical.
+3. Identify the most consequential improvement areas. Prioritize professional-duty, safety, ethics, correctness, and decision-quality concerns over presentation polish.
+4. Provide ideal approaches for the most important weak answers without inventing candidate history.
+5. Produce a concise, personalized study plan that applies to this target career.
 
 CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 {
   "success": true,
-  "overallScore": number, // A strict 0-100 percentage score representing their overall performance
-  "categoryScores": [
-    { "category": string, "score": number } // Each category score MUST also be a strict 0-100 percentage score
+  "auditedEvaluations": [
+    {
+      "answerIndex": 0,
+      "category": "Stable interview category name",
+      "severity": "none | minor | major | critical",
+      "dimensionScores": {
+        "relevance": 0,
+        "judgment": 0,
+        "evidence": 0,
+        "roleCompetence": 0,
+        "communication": 0
+      }
+    }
   ],
   "strongestAnswers": [
-    { "topic": string, "feedback": string }
+    { "answerIndex": 0, "topic": string, "feedback": string }
   ],
   "weakestAreas": [
     string
@@ -777,10 +1055,47 @@ CRITICAL: Return ONLY a valid JSON object matching exactly this schema:
 }`;
 
   try {
-    const result = await runGemini(prompt, 3000);
-    const jsonStr = result.replace(/^```json\s*|```$/g, "").trim();
-    return JSON.parse(jsonStr);
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    const result = await runGemini(
+      prompt,
+      6000,
+      INTERVIEW_SYSTEM_PROMPT,
+      0.1
+    );
+    const parsed = parseJsonObject(result);
+    const answerAudits = readScoreAudits(
+      parsed.auditedEvaluations,
+      answerCount
+    );
+    const auditedMessages: MockInterviewMessage[] = answerAudits.map(
+      (audit) => ({
+        role: "user",
+        content: candidateAnswers[audit.answerIndex].content,
+        evaluation: {
+          ...audit,
+          strengths: [],
+          weaknesses: [],
+          criticalConcerns: [],
+          suggestedBetterAnswer: "Not used in the independent score audit.",
+          feedbackMarkdown: "",
+        },
+      })
+    );
+    const summary = calculateInterviewSummary(auditedMessages);
+
+    return {
+      success: true,
+      overallScore: summary.overallScore,
+      categoryScores: summary.categoryScores,
+      answerAudits,
+      strongestAnswers: readStrongestAnswers(
+        parsed.strongestAnswers,
+        answerAudits
+      ),
+      weakestAreas: readModelStringArray(parsed, "weakestAreas"),
+      idealAnswersMarkdown: readModelString(parsed, "idealAnswersMarkdown"),
+      studyPlanMarkdown: readModelString(parsed, "studyPlanMarkdown"),
+    };
+  } catch (error: unknown) {
+    return safeInterviewFailure("Unable to generate mock interview report:", error);
   }
 }
