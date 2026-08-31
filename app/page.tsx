@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useRef, useState, useEffect, useCallback, type ChangeEvent } from "react";
+import { marked } from "marked";
+import { toast } from "sonner";
 import { ResumeProvider, useResume } from "@/lib/resume-context";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { CoverLetterPreview } from "@/components/preview/cover-letter-preview";
@@ -17,15 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  parseRawResume, generateCoverLetter, generateInterviewPrep, scoreATS, shortenCoverLetter,
+  parseRawResume, extractPdfText, generateInterviewPrep, scoreATS, shortenCoverLetter,
   initMockInterview, chatMockInterview, generateMockInterviewReport
 } from "@/app/actions/resume-ai";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTurnstile } from "@/components/turnstile-provider";
 import { applyInterviewScoreAudits } from "@/lib/mock-interview";
@@ -34,6 +33,8 @@ import type {
   MockInterviewMessage,
   MockInterviewReport,
 } from "@/lib/mock-interview";
+import { isAtsResult, type ATSResult } from "@/lib/ats";
+import { mergeImportedResume } from "@/lib/resume-import";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,11 +48,11 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import {
-  FileText, Download, ExternalLink, User, Briefcase, FolderKanban,
+  FileText, Download, User, Briefcase, FolderKanban,
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
   Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload,
   Send, History, Play, StopCircle, ArrowRight, TrendingUp, Star, CircleDollarSign,
-  Map, Rocket, Activity, ArrowUpRight, CheckSquare
+  Map, Rocket, CheckSquare
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -91,8 +92,6 @@ const COLORS = [
   { value: "forest", label: "Forest" },
   { value: "black", label: "Black" },
 ];
-
-type ATSResult = any;
 
 function ResumeBuilderInner() {
   const { data } = useResume();
@@ -143,6 +142,10 @@ function ResumeBuilderInner() {
   const [pasteRaw, setPasteRaw] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfImportInfo, setPdfImportInfo] = useState<{
+    fileName: string;
+    pageCount: number;
+  } | null>(null);
 
   const [atsRole, setAtsRole] = useState("");
   const [atsCompany, setAtsCompany] = useState("");
@@ -153,7 +156,6 @@ function ResumeBuilderInner() {
   const [coverPreviewScale, setCoverPreviewScale] = useState(1);
   const [intPreviewScale, setIntPreviewScale] = useState(1);
 
-  const printContentRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
   const coverPreviewWrapperRef = useRef<HTMLDivElement>(null);
   const intPreviewWrapperRef = useRef<HTMLDivElement>(null);
@@ -161,32 +163,45 @@ function ResumeBuilderInner() {
 
   const { turnstileToken, handleUnauthorized, setSessionVerified } = useTurnstile();
 
-  useEffect(() => { 
-    setTimeout(() => setHasMounted(true), 0); 
+  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768); 
-    check(); 
     window.addEventListener("resize", check); 
-    
-    try {
-      const stored = localStorage.getItem("ascent_interview_history");
-      if (stored) {
-        setDashboardHistory(JSON.parse(stored) as MockInterviewHistoryRecord[]);
-      }
-      
-      const storedAts = localStorage.getItem("ascent_ats_result");
-      if (storedAts) setAtsResult(JSON.parse(storedAts));
-      
-      const storedAtsRole = localStorage.getItem("ascent_ats_role");
-      if (storedAtsRole) setAtsRole(storedAtsRole);
-      
-      const storedAtsCompany = localStorage.getItem("ascent_ats_company");
-      if (storedAtsCompany) setAtsCompany(storedAtsCompany);
-      
-      const storedAtsJD = localStorage.getItem("ascent_ats_jd");
-      if (storedAtsJD) setAtsJD(storedAtsJD);
-    } catch {}
 
-    return () => window.removeEventListener("resize", check); 
+    const initializationTimer = window.setTimeout(() => {
+      setHasMounted(true);
+      check();
+
+      try {
+        const stored = localStorage.getItem("ascent_interview_history");
+        if (stored) {
+          setDashboardHistory(
+            JSON.parse(stored) as MockInterviewHistoryRecord[]
+          );
+        }
+
+        const storedAts = localStorage.getItem("ascent_ats_result");
+        if (storedAts) {
+          const parsedAts: unknown = JSON.parse(storedAts);
+          if (isAtsResult(parsedAts)) setAtsResult(parsedAts);
+        }
+
+        const storedAtsRole = localStorage.getItem("ascent_ats_role");
+        if (storedAtsRole) setAtsRole(storedAtsRole);
+
+        const storedAtsCompany = localStorage.getItem("ascent_ats_company");
+        if (storedAtsCompany) setAtsCompany(storedAtsCompany);
+
+        const storedAtsJD = localStorage.getItem("ascent_ats_jd");
+        if (storedAtsJD) setAtsJD(storedAtsJD);
+      } catch {
+        // Ignore malformed local-only history and start with a clean view.
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(initializationTimer);
+      window.removeEventListener("resize", check);
+    };
   }, []);
 
   useEffect(() => {
@@ -221,7 +236,7 @@ function ResumeBuilderInner() {
 
   const handleCopy = async () => { if (!coverBody) return; try { await navigator.clipboard.writeText(coverBody); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { } };
   const handleDelete = () => { setCoverBody(""); setCoverTargetRole(""); setCoverCompanyName(""); setCoverUserName(""); setCoverSkills([]); };
-  const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody, turnstileToken || undefined)); setSessionVerified(); } catch(e:any) { handleUnauthorized(e); } finally { setShortening(false); } };
+  const handleShorten = async () => { if (!coverBody) return; setShortening(true); try { setCoverBody(await shortenCoverLetter(coverBody, turnstileToken || undefined)); setSessionVerified(); } catch(e: unknown) { handleUnauthorized(e); } finally { setShortening(false); } };
   const handleCoverLetterGenerate = (
     body: string, 
     targetRole: string, 
@@ -280,53 +295,65 @@ function ResumeBuilderInner() {
       }
       setCoverBody(newBody);
       setSessionVerified();
-    } catch(e:any) { handleUnauthorized(e); } finally { setRegenerating(false); } };
+    } catch(e: unknown) { handleUnauthorized(e); } finally { setRegenerating(false); } };
   const handlePaste = async () => {
     if (!pasteRaw.trim()) return;
     setPasteLoading(true);
     try {
       const j = await parseRawResume(pasteRaw, turnstileToken || undefined);
-      const p = JSON.parse(j);
-      const newData = { ...data };
-      
-      if (p.personalInfo) {
-        const currentPI = newData.personalInfo;
-        const newPI = p.personalInfo;
-        newData.personalInfo = {
-          ...currentPI,
-          fullName: newPI.fullName || currentPI.fullName,
-          title: newPI.title || currentPI.title,
-          email: newPI.email || currentPI.email,
-          phone: newPI.phone || currentPI.phone,
-          location: newPI.location || currentPI.location,
-          linkedin: newPI.linkedin || currentPI.linkedin,
-          website: newPI.website || currentPI.website,
-          summary: newPI.summary || currentPI.summary,
-        };
-      }
-      
-      if (p.experience && Array.isArray(p.experience) && p.experience.length > 0) {
-        newData.experience = p.experience.map((exp: Record<string, unknown>) => ({ ...exp, id: crypto.randomUUID() }));
-      }
-      if (p.education && Array.isArray(p.education) && p.education.length > 0) {
-        newData.education = p.education.map((edu: Record<string, unknown>) => ({ ...edu, id: crypto.randomUUID() }));
-      }
-      if (p.skills && Array.isArray(p.skills) && p.skills.length > 0) {
-        newData.skills = p.skills.map((sk: Record<string, unknown>) => ({ ...sk, id: crypto.randomUUID() }));
-      }
-      if (p.projects && Array.isArray(p.projects) && p.projects.length > 0) {
-        newData.projects = p.projects.map((proj: Record<string, unknown>) => ({ ...proj, id: crypto.randomUUID() }));
-      }
-      
+      const parsed: unknown = JSON.parse(j);
+      const newData = mergeImportedResume(parsed, data);
       dispatchers.loadResume(newData);
       setSessionVerified();
       setPasteOpen(false);
       setPasteRaw("");
+      setPdfImportInfo(null);
       if (isMobile) setActiveTab("preview");
-    } catch (e: any) {
+    } catch (e: unknown) {
       handleUnauthorized(e);
     } finally {
       setPasteLoading(false);
+    }
+  };
+
+  const handlePdfUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || pdfLoading) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("PDF is too large", {
+        description: "Choose a resume PDF that is 5 MB or smaller.",
+      });
+      return;
+    }
+
+    setPdfLoading(true);
+    setPdfImportInfo(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await extractPdfText(
+        formData,
+        turnstileToken || undefined
+      );
+      if (!result.success) {
+        toast.error("PDF could not be imported", {
+          description: result.error,
+        });
+        return;
+      }
+
+      setPasteRaw(result.text);
+      setPdfImportInfo({ fileName: file.name, pageCount: result.pageCount });
+      setSessionVerified();
+      toast.success("PDF text extracted", {
+        description: "Review the text, then populate your resume.",
+      });
+    } catch (error: unknown) {
+      handleUnauthorized(error);
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -337,7 +364,13 @@ function ResumeBuilderInner() {
     try { 
       const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience.map(e => ({ role: e.role, company: e.company, description: e.bullets })), Projects: data.projects.map(p => ({ name: p.name, skills: p.skills, description: p.bullets })), Skills: data.skills.map(s => ({ category: s.category, skills: s.skills })) }); 
       const fullJD = `Role: ${atsRole}\nCompany: ${atsCompany}\n\nDescription:\n${atsJD}`; 
-      const result = JSON.parse(await scoreATS(bg, fullJD, turnstileToken || undefined));
+      const parsedResult: unknown = JSON.parse(
+        await scoreATS(bg, fullJD, turnstileToken || undefined)
+      );
+      if (!isAtsResult(parsedResult)) {
+        throw new Error("The ATS report response was invalid.");
+      }
+      const result = parsedResult;
       setAtsResult(result); 
       setSessionVerified(); 
       
@@ -345,7 +378,7 @@ function ResumeBuilderInner() {
       localStorage.setItem("ascent_ats_role", atsRole);
       localStorage.setItem("ascent_ats_company", atsCompany);
       localStorage.setItem("ascent_ats_jd", atsJD);
-    } catch(e:any) { 
+    } catch(e: unknown) {
       handleUnauthorized(e); 
       setAtsResult(null); 
     } finally { 
@@ -383,7 +416,7 @@ function ResumeBuilderInner() {
         alert("Failed to start mock interview.");
         setMockStatus("setup");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       handleUnauthorized(e);
       setMockStatus("setup");
     } finally {
@@ -418,7 +451,7 @@ function ResumeBuilderInner() {
       } else {
         handleUnauthorized(new Error(res.error));
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       handleUnauthorized(e);
     } finally {
       setMockLoading(false);
@@ -459,7 +492,7 @@ function ResumeBuilderInner() {
       } else {
         handleUnauthorized(new Error(res.error));
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       handleUnauthorized(e);
     } finally {
       setMockLoading(false);
@@ -508,14 +541,14 @@ function ResumeBuilderInner() {
             <div key={idx} className="flex flex-col gap-3">
               <div className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${msg.role === "user" ? "bg-blue-600 text-white rounded-br-sm" : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-bl-sm"}`}>
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-snug prose-p:my-1" dangerouslySetInnerHTML={{ __html: require("marked").parse(msg.content) }} />
+                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-snug prose-p:my-1" dangerouslySetInnerHTML={{ __html: marked.parse(msg.content) as string }} />
                 </div>
               </div>
               
               {msg.feedback && (
                 <div className="w-full flex justify-center my-2">
                   <Card className="w-[90%] border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm">
-                    <div className="p-3 text-xs prose prose-sm dark:prose-invert max-w-none prose-headings:text-sm prose-headings:font-bold prose-headings:mb-1 prose-p:leading-snug prose-p:my-1 text-blue-900 dark:text-blue-100" dangerouslySetInnerHTML={{ __html: require("marked").parse(msg.feedback) }} />
+                    <div className="p-3 text-xs prose prose-sm dark:prose-invert max-w-none prose-headings:text-sm prose-headings:font-bold prose-headings:mb-1 prose-p:leading-snug prose-p:my-1 text-blue-900 dark:text-blue-100" dangerouslySetInnerHTML={{ __html: marked.parse(msg.feedback) as string }} />
                   </Card>
                 </div>
               )}
@@ -553,7 +586,7 @@ function ResumeBuilderInner() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">Study Plan</h4>
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-xs" dangerouslySetInnerHTML={{ __html: require("marked").parse(mockReport.studyPlanMarkdown || "") }} />
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-xs" dangerouslySetInnerHTML={{ __html: marked.parse(mockReport.studyPlanMarkdown || "") as string }} />
                   </div>
                 </div>
               </Card>
@@ -638,7 +671,7 @@ function ResumeBuilderInner() {
                       {record.report?.idealAnswersMarkdown && (
                         <div>
                           <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs mb-2">Ideal Answers</h4>
-                          <div className="prose prose-sm dark:prose-invert max-w-none text-xs bg-zinc-50 dark:bg-zinc-950 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800" dangerouslySetInnerHTML={{ __html: require("marked").parse(record.report.idealAnswersMarkdown) }} />
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-xs bg-zinc-50 dark:bg-zinc-950 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800" dangerouslySetInnerHTML={{ __html: marked.parse(record.report.idealAnswersMarkdown) as string }} />
                         </div>
                       )}
                     </div>
@@ -659,7 +692,7 @@ function ResumeBuilderInner() {
       const bg = JSON.stringify({ Summary: data.personalInfo.summary, Experience: data.experience, Projects: data.projects, Skills: data.skills });
       setIntContent(await generateInterviewPrep(intRole, intCompany, bg, turnstileToken || undefined));
       setSessionVerified();
-    } catch (e: any) { 
+    } catch (e: unknown) {
       handleUnauthorized(e);
     } finally {
       setIntGenerating(false);
@@ -699,8 +732,6 @@ function ResumeBuilderInner() {
   const atsEl = <AtsPreview atsResult={atsResult} atsRole={atsRole} atsCompany={atsCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const coverEl = <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} />;
   const intEl = <InterviewPreview content={intContent} mockReport={intMode === "mock" && mockStatus === "completed" ? mockReport ?? undefined : undefined} mockMessages={intMode === "mock" && mockStatus === "completed" ? mockMessages : undefined} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
-  const ap = isRes ? (isAts ? atsEl : resumeEl) : isCov ? coverEl : intEl;
-
   function renderLeftPane() {
     if (isRes && isAts) {
       return (
@@ -867,7 +898,7 @@ function ResumeBuilderInner() {
                         <div>
                           <div className="text-[10px] font-bold text-red-800 uppercase mb-2">Critical Gaps</div>
                           <div className="space-y-3">
-                            {atsResult.missingSkillsImpact.criticalGaps.map((gap: any, i: number) => (
+                            {atsResult.missingSkillsImpact.criticalGaps.map((gap, i) => (
                               <div key={i} className="bg-white/50 dark:bg-black/20 p-2.5 rounded border border-red-100 dark:border-red-900/30">
                                 <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
                                   <span className="text-xs font-bold text-red-900 dark:text-red-200 flex items-center gap-1.5"><span className="text-red-500">•</span> {gap.skill}</span>
@@ -892,7 +923,7 @@ function ResumeBuilderInner() {
                         <div>
                           <div className="text-[10px] font-bold text-amber-700 uppercase mb-2">Moderate Gaps</div>
                           <div className="space-y-3">
-                            {atsResult.missingSkillsImpact.moderateGaps.map((gap: any, i: number) => (
+                            {atsResult.missingSkillsImpact.moderateGaps.map((gap, i) => (
                               <div key={i} className="bg-white/50 dark:bg-black/20 p-2.5 rounded border border-amber-100 dark:border-amber-900/30">
                                 <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
                                   <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5"><span className="text-amber-500">•</span> {gap.skill}</span>
@@ -927,7 +958,7 @@ function ResumeBuilderInner() {
                 <div className="pt-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-3"><TrendingUp className="h-4 w-4 text-purple-500" /> Highest ROI Improvements</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {atsResult.highestRoiImprovements.map((improvement: any, i: number) => (
+                    {atsResult.highestRoiImprovements.map((improvement, i) => (
                       <Card key={i} className="flex flex-col p-3 shadow-sm border-zinc-200 dark:border-zinc-800 bg-purple-50/30 dark:bg-purple-900/10">
                         <div className="flex justify-between items-start mb-1.5">
                           <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{improvement.skill}</span>
@@ -1022,7 +1053,7 @@ function ResumeBuilderInner() {
                     <Card className="border-sky-100 bg-sky-50/30 dark:border-sky-900/50 dark:bg-sky-900/10">
                       <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm flex items-center gap-2 text-sky-700 dark:text-sky-400"><Briefcase className="h-4 w-4" /> Better Matched Roles</CardTitle></CardHeader>
                       <CardContent className="px-4 pb-4 space-y-2 text-xs text-sky-900 dark:text-sky-200">
-                        {atsResult.similarRoles.map((role: any, i: number) => (
+                        {atsResult.similarRoles.map((role, i) => (
                           <div key={i} className="flex justify-between border-b border-sky-100 dark:border-sky-800/30 pb-1.5 last:border-0 last:pb-0">
                             <span className="font-medium">{role.role}</span>
                             <span className="font-bold text-sky-700 dark:text-sky-300">{role.matchPercentage}%</span>
@@ -1096,7 +1127,7 @@ function ResumeBuilderInner() {
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-2"><CheckSquare className="h-4 w-4 text-sky-500" /> Strength vs Job Requirements</h3>
                   <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-950 shadow-sm">
                     <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {atsResult.requirementsComparison.map((req: any, i: number) => (
+                      {atsResult.requirementsComparison.map((req, i) => (
                         <div key={i} className="flex justify-between items-center p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
                           <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{req.requirement}</span>
                           {req.status === "Strong" ? (
@@ -1115,7 +1146,7 @@ function ResumeBuilderInner() {
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200"><Wrench className="h-4 w-4" /> Concept-Based Analysis</h3>
                 <Accordion className="w-full space-y-2">
-                  {atsResult.skillConcepts.map((concept: any, i: number) => (
+                  {atsResult.skillConcepts.map((concept, i) => (
                     <AccordionItem key={i} value={`item-${i}`} className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-lg px-1 overflow-hidden">
                       <AccordionTrigger className="hover:no-underline py-3 px-3">
                         <div className="flex items-center justify-between w-full pr-4">
@@ -1156,7 +1187,7 @@ function ResumeBuilderInner() {
                 <div className="space-y-3 pt-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2 text-zinc-800 dark:text-zinc-200"><Wand2 className="h-4 w-4" /> Bullet Point Upgrades</h3>
                   <div className="space-y-4">
-                    {atsResult.actionableRewrites.map((rewrite: any, i: number) => (
+                    {atsResult.actionableRewrites.map((rewrite, i) => (
                       <Card key={i} className="overflow-hidden shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
                         <div className="p-4 bg-white dark:bg-zinc-950 border-b border-zinc-200/60 dark:border-zinc-800/60">
                           <span className="text-[10px] font-bold uppercase text-red-500/80 dark:text-red-400/80 mb-1.5 block tracking-wider">Original (Weak)</span>
@@ -1364,7 +1395,98 @@ function ResumeBuilderInner() {
 
   return (
     <>
-      {pasteOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200"><div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"><div className="flex items-center justify-between mb-3 shrink-0"><h2 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-primary">Magic Import</span></h2><button onClick={() => setPasteOpen(false)} className="text-zinc-400 hover:text-zinc-600"><X className="h-4 w-4" /></button></div><div className="flex flex-col gap-3 flex-1 overflow-hidden"><div className="flex items-center justify-between"><p className="text-xs text-zinc-500">Paste raw resume text below</p>{/*<div className="relative"><input type="file" accept=".pdf" onChange={handlePdfUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={pdfLoading} /><Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 px-2">{pdfLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}{pdfLoading ? "Extracting..." : "Upload PDF"}</Button></div>*/}</div><Textarea value={pasteRaw} onChange={e => setPasteRaw(e.target.value)} placeholder="Paste raw text here..." className="flex-1 min-h-[20vh] max-h-[40vh] overflow-y-auto resize-none text-[16px] md:text-sm" /></div><Button onClick={handlePaste} disabled={pasteLoading || !pasteRaw.trim()} className="w-full gap-1.5 mt-4 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground border-0 active:scale-95 transition-all duration-200" size="sm">{pasteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{pasteLoading ? "Parsing..." : "Populate Resume"}</Button></div></div>)}
+      {pasteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-3 shrink-0">
+              <div>
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-primary">Magic Import</span>
+                </h2>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Paste resume text or extract it from a text-based PDF.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close Magic Import"
+                onClick={() => {
+                  setPasteOpen(false);
+                  setPdfImportInfo(null);
+                }}
+                className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <label className="relative mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-blue-300 bg-blue-50/60 px-4 py-3 transition-colors hover:border-blue-400 hover:bg-blue-50 focus-within:ring-2 focus-within:ring-blue-500 dark:border-blue-800 dark:bg-blue-950/20 dark:hover:bg-blue-950/30">
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handlePdfUpload}
+                disabled={pdfLoading || pasteLoading}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+              />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 dark:bg-zinc-900 dark:ring-blue-900">
+                {pdfLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                  {pdfLoading ? "Extracting PDF text..." : "Choose a resume PDF"}
+                </p>
+                <p className="text-[11px] text-zinc-500">
+                  Up to 5 MB. Scanned image-only PDFs are not supported yet.
+                </p>
+              </div>
+            </label>
+
+            {pdfImportInfo && (
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800 dark:border-green-900/60 dark:bg-green-950/20 dark:text-green-300">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                <span className="truncate font-medium">{pdfImportInfo.fileName}</span>
+                <span className="ml-auto shrink-0 text-green-700/70 dark:text-green-400/70">
+                  {pdfImportInfo.pageCount} {pdfImportInfo.pageCount === 1 ? "page" : "pages"}
+                </span>
+              </div>
+            )}
+
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+              <label htmlFor="magic-import-text" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                Resume text
+              </label>
+              <Textarea
+                id="magic-import-text"
+                value={pasteRaw}
+                onChange={(event) => {
+                  setPasteRaw(event.target.value);
+                  setPdfImportInfo(null);
+                }}
+                placeholder="Paste raw resume text here, or choose a PDF above..."
+                className="min-h-[20vh] max-h-[40vh] flex-1 resize-none overflow-y-auto text-[16px] md:text-sm"
+              />
+            </div>
+            <Button
+              onClick={handlePaste}
+              disabled={pasteLoading || pdfLoading || !pasteRaw.trim()}
+              className="mt-4 w-full shrink-0 gap-1.5 bg-primary text-primary-foreground transition-all duration-200 active:scale-95"
+              size="sm"
+            >
+              {pasteLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              {pasteLoading ? "Structuring Resume..." : "Populate Resume"}
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
         <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>

@@ -40,6 +40,13 @@ type ResumeAction =
 
 // ---- Reducer ----
 
+function reorder<T>(items: T[], startIndex: number, endIndex: number): T[] {
+  const list = [...items];
+  const [removed] = list.splice(startIndex, 1);
+  if (removed !== undefined) list.splice(endIndex, 0, removed);
+  return list;
+}
+
 function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
   switch (action.type) {
     case "SET_PERSONAL_INFO":
@@ -154,10 +161,28 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
 
     case "REORDER_ITEMS": {
       const { section, startIndex, endIndex } = action;
-      const list = Array.from(state[section] as any[]);
-      const [removed] = list.splice(startIndex, 1);
-      list.splice(endIndex, 0, removed);
-      return { ...state, [section]: list };
+      if (section === "experience") {
+        return {
+          ...state,
+          experience: reorder(state.experience, startIndex, endIndex),
+        };
+      }
+      if (section === "projects") {
+        return {
+          ...state,
+          projects: reorder(state.projects, startIndex, endIndex),
+        };
+      }
+      if (section === "education") {
+        return {
+          ...state,
+          education: reorder(state.education, startIndex, endIndex),
+        };
+      }
+      return {
+        ...state,
+        skills: reorder(state.skills, startIndex, endIndex),
+      };
     }
 
     default:

@@ -4,7 +4,12 @@ import { resolve } from "node:path";
 const projectRoot = resolve(__dirname);
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdfjs-dist", "canvas"],
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "canvas"],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "6mb",
+    },
+  },
   turbopack: {
     root: projectRoot,
   },

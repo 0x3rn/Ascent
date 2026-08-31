@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   title: "Ascent | AI-Powered Career Toolkit",
   description:
     "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides.",
-  keywords: ["AI Resume Builder", "ATS Friendly Resume", "Cover Letter Generator", "Interview Prep", "Career Toolkit", "DeepSeek", "Resume Optimization"],
+  keywords: ["AI Resume Builder", "ATS Friendly Resume", "Cover Letter Generator", "Interview Prep", "Career Toolkit", "Gemini", "Resume Optimization"],
   authors: [{ name: "Ascent" }],
   openGraph: {
     title: "Ascent | AI-Powered Career Toolkit",

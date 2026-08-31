@@ -1,6 +1,6 @@
 # Ascent - AI-Powered Career Toolkit
 
-A premium, production-ready career toolkit that combines live A4 previews with AI-powered writing assistance across resumes, cover letters, and interview preparation. Built with Next.js 16 (App Router), Tailwind CSS v4, and DeepSeek AI.
+A premium, production-ready career toolkit that combines live A4 previews with AI-powered writing assistance across resumes, cover letters, and interview preparation. Built with Next.js 16 (App Router), Tailwind CSS v4, and Gemini on Google Vertex AI.
 
 ## Features
 
@@ -140,7 +140,7 @@ npm start
 
 ```
 ├── app/
-│   ├── actions/resume-ai.ts        # 8 DeepSeek server actions
+│   ├── actions/resume-ai.ts        # Gemini server actions with a commented DeepSeek fallback
 │   ├── globals.css                 # Tailwind, HSL theme, print styles, transitions
 │   ├── layout.tsx                  # Root layout + ThemeProvider
 │   └── page.tsx                    # Split-screen workspace

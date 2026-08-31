@@ -34,7 +34,7 @@ function TailorDialog({
         updateExperience(expId, { bullets: result });
         setSessionVerified();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Tailor failed:", err);
       handleUnauthorized(err);
     } finally {

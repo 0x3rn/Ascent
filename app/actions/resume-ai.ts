@@ -3,6 +3,7 @@
 import OpenAI from "openai";
 import { GoogleAuth } from "google-auth-library";
 import { verifyTurnstileSession } from "@/lib/turnstile";
+import { validateAtsResult } from "@/lib/ats";
 import {
   calculateInterviewSummary,
   completeInterviewEvaluation,
@@ -65,7 +66,7 @@ const STRICT_SYSTEM_PROMPT = `You are an expert resume writer. You MUST return O
 - NEVER wrap your response in quotes or markdown code fences.
 - CRITICAL: DO NOT use em dashes under any circumstances. Use commas, semicolons, or standard hyphens (-) instead.
 - Return ONLY the raw text content that belongs in the resume field.
-- NEVER invent improvement metrics or about the projects unless it is provided by the user.`;
+- NEVER invent metrics, outcomes, responsibilities, credentials, tools, employers, or project details that the user did not provide.`;
 
 const INTERVIEW_SYSTEM_PROMPT = `You are a rigorous, calibrated career interviewer and evaluator.
 - Evaluate candidates against the target role, seniority, question, and evidence provided.
@@ -106,25 +107,76 @@ async function runGemini(
   systemPrompt: string = STRICT_SYSTEM_PROMPT,
   temperature: number = 0.4
 ): Promise<string> {
-  const gemini = await getGemini();
-  const response = await gemini.chat.completions.create({
-    model: "google/gemini-3.7-flash",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: prompt },
-    ],
-    temperature,
-    max_tokens: maxTokens,
-  });
-  const text = response.choices[0]?.message?.content?.trim() ?? "";
-  return text.replace(/\u2014/g, "-");
+  let tokenBudget = maxTokens;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const gemini = await getGemini();
+    const response = await gemini.chat.completions.create({
+      model: "google/gemini-3.7-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ],
+      temperature,
+      max_tokens: tokenBudget,
+    });
+    const choice = response.choices[0];
+    const text = choice?.message?.content?.trim().replace(/\u2014/g, "-") ?? "";
+
+    if (text && choice?.finish_reason !== "length") {
+      return text;
+    }
+
+    tokenBudget = Math.min(tokenBudget * 2, 16_000);
+  }
+
+  throw new Error("The AI response was incomplete after a retry.");
+}
+
+function isCompleteProse(
+  text: string,
+  minimumParagraphs: number,
+  maximumParagraphs: number
+): boolean {
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+  return (
+    paragraphs.length >= minimumParagraphs &&
+    paragraphs.length <= maximumParagraphs &&
+    /[.!?]["')\]]?$/.test(text.trim())
+  );
+}
+
+async function generateCompleteProse(
+  prompt: string,
+  minimumParagraphs: number,
+  maximumParagraphs: number,
+  initialTokenBudget: number
+): Promise<string> {
+  const first = await runGemini(prompt, initialTokenBudget);
+  if (isCompleteProse(first, minimumParagraphs, maximumParagraphs)) {
+    return first;
+  }
+
+  const retry = await runGemini(
+    `${prompt}\n\nYour previous attempt was incomplete or had the wrong paragraph count. Return a complete response with ${minimumParagraphs} to ${maximumParagraphs} paragraphs and finish the final sentence.`,
+    Math.max(initialTokenBudget * 2, 3_000),
+    STRICT_SYSTEM_PROMPT,
+    0.25
+  );
+  if (!isCompleteProse(retry, minimumParagraphs, maximumParagraphs)) {
+    throw new Error("The AI returned an incomplete prose response.");
+  }
+  return retry;
 }
 
 export async function enhanceBulletPoint(bulletText: string, turnstileToken?: string): Promise<string> {
   await verifyTurnstileSession(turnstileToken);
-  const prompt = `Rewrite the following resume bullet point using strong action verbs, quantifiable metrics, and concise, impactful phrasing. Use the formula: [Action Verb] + [What Was Done] + [Measurable Result/Impact].
+  const prompt = `Rewrite the following resume bullet point using strong action verbs and concise, impactful phrasing. Use the formula: [Action Verb] + [What Was Done] + [Verified Result/Impact, only when present in the input].
 
-If the input lacks metrics, infer reasonable ones based on the context.
+Preserve the facts exactly. If the input lacks a metric or outcome, do not invent or imply one. Improve only the wording, clarity, and specificity already supported by the input.
 
 Input: "${bulletText}"
 
@@ -150,7 +202,7 @@ I want to tailor them to this job description:
 ${jobDescription}
 """
 
-Your task: Rewrite each bullet point to naturally incorporate relevant keywords and phrases from the job description. Keep the original structure and order. Use strong action verbs and metrics where possible. Do NOT fabricate entirely new experiences.
+Your task: Rewrite each bullet point to naturally incorporate relevant keywords and phrases from the job description. Keep the original structure and order. Use strong action verbs and preserve only metrics already present in the original bullets. Do NOT fabricate experiences, duties, tools, outcomes, or metrics.
 
 Return ONLY the rewritten bullet points, maintaining the same bullet format (one per line with the same bullet character). Do NOT add or remove bullets. Return EXACTLY the same number of bullets as the input.`;
   return runGemini(prompt);
@@ -206,7 +258,7 @@ ${
 
 Return ONLY the raw cover letter body text (the paragraphs between the salutation and sign-off). No date line, no address block, no salutation, no closing sign-off; just the body paragraphs. Each paragraph separated by a blank line. No conversational filler.`;
 
-  return runGemini(prompt, 1024);
+  return generateCompleteProse(prompt, 3, 4, 3_000);
 }
 
 export async function shortenCoverLetter(currentText: string, turnstileToken?: string): Promise<string> {
@@ -222,8 +274,11 @@ ${currentText}
 
 Return ONLY the shortened cover letter body text. Each paragraph separated by a blank line. No conversational filler.`;
 
-  const maxTokens: number = currentText.length > 200 ? 512 : 256;
-  return runGemini(prompt, maxTokens);
+  const shortened = await generateCompleteProse(prompt, 1, 2, 2_000);
+  if (shortened.length >= currentText.length) {
+    throw new Error("The shortened cover letter was not shorter than the original.");
+  }
+  return shortened;
 }
 
 export async function generateFreelanceProposal(
@@ -334,6 +389,62 @@ Return ONLY the JSON object. No markdown code fences, no conversational text.`;
   return result.replace(/^```json\s*|```$/g, "").trim();
 }
 
+export type PdfTextExtractionResult =
+  | { success: true; text: string; pageCount: number }
+  | { success: false; error: string };
+
+export async function extractPdfText(
+  formData: FormData,
+  turnstileToken?: string
+): Promise<PdfTextExtractionResult> {
+  await verifyTurnstileSession(turnstileToken);
+  const file = formData.get("file");
+
+  if (!(file instanceof File)) {
+    return { success: false, error: "Choose a PDF file to import." };
+  }
+  if (file.size === 0) {
+    return { success: false, error: "The selected PDF is empty." };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { success: false, error: "PDF files must be 5 MB or smaller." };
+  }
+  if (file.type && file.type !== "application/pdf") {
+    return { success: false, error: "The selected file is not a PDF." };
+  }
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
+      return { success: false, error: "The selected file is not a valid PDF." };
+    }
+
+    const { default: pdfParse } = await import("pdf-parse");
+    const parsed = await pdfParse(buffer);
+    const text = parsed.text.replace(/\u0000/g, "").trim().slice(0, 120_000);
+
+    if (text.length < 40) {
+      return {
+        success: false,
+        error:
+          "No readable text was found. If this is a scanned resume, use a text-based PDF or paste the text instead.",
+      };
+    }
+
+    return {
+      success: true,
+      text,
+      pageCount: parsed.numpages,
+    };
+  } catch (error: unknown) {
+    console.error("Unable to extract PDF text:", error);
+    return {
+      success: false,
+      error: "We couldn't read that PDF. Try exporting it again or paste the resume text.",
+    };
+  }
+}
+
 // ---- ATS SCORING ----
 export async function scoreATS(
   resumeData: string,
@@ -366,6 +477,11 @@ Evaluate based on these strict rules:
   - Make the tone of the executiveSummary and bottomLine highly professional, like a senior recruiter. Do not use casual phrases like 'Hey there'. Start directly with an authoritative evaluation (e.g., "Your resume demonstrates a strong foundation...").
 7. Missing Skills & Confidence: For every missing skill gap, estimate an AI confidence level (0-100) based on how certain you are that it is actually missing from their experience, rather than just omitted from the text.
 8. Personalized Learning Path: Tailor the learning path strictly to the user's existing skills. Do not just say "Learn X". Say "Since you have experience with [User Skill Y], the next logical step is to learn [Target Skill X]..."
+9. Evidence Grounding:
+   - Split requirements into atomic items. Never combine separate requirements with "/" or "and".
+   - Every requirement marked "Strong" must include a short, exact quote copied from the resume in its evidence field.
+   - Never infer a licence, certification, clearance, degree, credential, or regulated status. Mark it "Strong" only when the exact credential is explicitly stated in the resume.
+   - Every actionable rewrite must include one or more exact resume quotes in sourceEvidence. The rewrite may clarify those facts but must not add duties, tools, settings, outcomes, credentials, or numbers absent from that evidence.
 
 You must return a STRICT JSON object matching this exact schema, with no markdown formatting outside of the JSON:
 {
@@ -393,7 +509,8 @@ You must return a STRICT JSON object matching this exact schema, with no markdow
   "requirementsComparison": [
     {
       "requirement": string, 
-      "status": string // EXACTLY "Strong" or "Missing"
+      "status": string, // EXACTLY "Strong" or "Missing"
+      "evidence": string // exact resume quote for Strong; empty string for Missing
     }
   ],
   "skillConcepts": [
@@ -472,13 +589,16 @@ You must return a STRICT JSON object matching this exact schema, with no markdow
     "atsCompatibilityPercentile": string // e.g., "Top 30%"
   },
   "insights": {
-    "recruiterFeedback": string
+    "recruiterFeedback": string,
+    "strongAreas": [string],
+    "weakAreas": [string]
   },
   "actionableRewrites": [
     {
       "originalText": string,
       "improvedText": string,
-      "reason": string
+      "reason": string,
+      "sourceEvidence": [string] // exact resume quotes supporting every factual claim
     }
   ],
   "bottomLine": string,
@@ -501,8 +621,23 @@ ${jobDescription}
 
 Return ONLY the JSON object.`;
 
-  const result = await runGemini(prompt, 8000); // Increased maxTokens due to larger output schema
-  return result.replace(/^```json\s*|```$/g, "").trim();
+  let validationError = "";
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const correction = validationError
+      ? `\n\nYour previous report failed validation: ${validationError}. Correct the grounding problem and return the entire JSON report again.`
+      : "";
+    const result = await runGemini(`${prompt}${correction}`, 10_000, STRICT_SYSTEM_PROMPT, 0.15);
+    const jsonText = result.replace(/^```json\s*|```$/g, "").trim();
+    try {
+      const validated = validateAtsResult(JSON.parse(jsonText), resumeData);
+      return JSON.stringify(validated);
+    } catch (error: unknown) {
+      validationError =
+        error instanceof Error ? error.message : "The report was not grounded in the resume.";
+    }
+  }
+
+  throw new Error(`ATS grounding validation failed: ${validationError}`);
 }
 
 // ---- INTERVIEW PREP ----
