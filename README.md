@@ -103,6 +103,33 @@ npm run build
 npm start
 ```
 
+### Cloudflare Workers deployment
+
+Vercel remains the default deployment path. Cloudflare Workers is available through the additive OpenNext adapter, so the normal `next build` and `next start` commands are unchanged.
+
+Install dependencies, then preview the Worker runtime locally:
+
+```bash
+npm install
+cp .dev.vars.example .dev.vars
+npm run preview:cloudflare
+```
+
+On PowerShell, use `Copy-Item .dev.vars.example .dev.vars` instead of `cp` if your shell does not provide the alias.
+
+Deploy to a Cloudflare Worker after authenticating Wrangler:
+
+```bash
+npx wrangler login
+npm run deploy:cloudflare
+```
+
+The Cloudflare configuration is in `wrangler.jsonc`, the adapter settings are in `open-next.config.ts`, and the generated `.open-next` directory is ignored by Git. Set the same application secrets used by Vercel in Cloudflare Workers Build variables and secrets. The public Turnstile site key must be available as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; the Google Cloud project, service-account JSON, and Turnstile secret remain server-only variables.
+
+The Cloudflare adapter is pinned to a release compatible with the current Next.js 16.2.7 version. I can upgrade that pin when the project moves to a supported Next.js version.
+
+OpenNext currently warns that its Worker bundler is not fully compatible with Windows. If the local Cloudflare build cannot create junctions or symlinks, run `npm run preview:cloudflare` in WSL or let Cloudflare Workers Builds run it in its Linux build environment. The Vercel build remains fully supported on this Windows checkout.
+
 ## AI Features
 
 ### Resume Actions
