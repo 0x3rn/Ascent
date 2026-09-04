@@ -124,6 +124,21 @@ npx wrangler login
 npm run deploy:cloudflare
 ```
 
+#### Cloudflare Workers Builds settings
+
+If the Worker is connected to this repository through Cloudflare's Workers Builds, use these settings at the project root:
+
+| Setting | Value |
+|---------|-------|
+| Build command | `npx @opennextjs/cloudflare build` |
+| Deploy command | `npx @opennextjs/cloudflare deploy` |
+| Version command | Leave blank for normal production deploys. For gradual or preview versions, use `npx @opennextjs/cloudflare upload` |
+| Root directory | `/` (the repository root) |
+
+The regular `npm run build` command is intentionally kept for Vercel and produces a standard Next.js build. It does not create the `.open-next` Worker bundle, so using it as Cloudflare's build command causes deployment to fail with "Could not find compiled Open Next config". The equivalent repository scripts are `npm run build:cloudflare` and `npm run deploy:cloudflare` for local use.
+
+The version command uploads a new Worker version without promoting it immediately. Use it only when you plan to manage a gradual rollout; it is not needed for the normal production deploy path.
+
 The Cloudflare configuration is in `wrangler.jsonc`, the adapter settings are in `open-next.config.ts`, and the generated `.open-next` directory is ignored by Git. Set the same application secrets used by Vercel in Cloudflare Workers Build variables and secrets. The public Turnstile site key must be available as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; the Google Cloud project, service-account JSON, and Turnstile secret remain server-only variables.
 
 The Cloudflare adapter is pinned to a release compatible with the current Next.js 16.2.7 version. I can upgrade that pin when the project moves to a supported Next.js version.
