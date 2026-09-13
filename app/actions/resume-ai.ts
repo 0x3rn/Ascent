@@ -1,7 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import { GoogleAuth } from "google-auth-library";
+import { getGoogleAccessToken } from "@/lib/google-service-account";
 import { verifyTurnstileSession } from "@/lib/turnstile";
 import { validateAtsResult } from "@/lib/ats";
 import {
@@ -38,22 +38,10 @@ async function getGemini() {
     throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not configured.");
   }
 
-  const credentials = JSON.parse(credentialsJson);
-
-  const auth = new GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-  });
-
-  const client = await auth.getClient();
-  const accessToken = await client.getAccessToken();
-
-  if (!accessToken.token) {
-    throw new Error("Unable to obtain Google Cloud access token.");
-  }
+  const accessToken = await getGoogleAccessToken(credentialsJson);
 
   return new OpenAI({
-    apiKey: accessToken.token,
+    apiKey: accessToken,
     baseURL:
       `https://aiplatform.googleapis.com/v1/` +
       `projects/${projectId}/locations/global/endpoints/openapi`,
