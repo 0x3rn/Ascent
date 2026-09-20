@@ -30,7 +30,7 @@ export function AiMagicButton({
         onResult(result);
         setSessionVerified();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("AI enhancement failed:", err);
       handleUnauthorized(err);
     } finally {

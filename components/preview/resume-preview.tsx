@@ -3,7 +3,7 @@
 import React from "react";
 import { useResume } from "@/lib/resume-context";
 import { marked } from "marked";
-import { Mail, Phone, MapPin, Globe, Link } from "lucide-react";
+import { Mail, Phone, MapPin, Globe } from "lucide-react";
 
 interface ResumePreviewProps {
   themeFont?: string;
@@ -103,7 +103,7 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
             {personalInfo.phone && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Phone className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.phone}</span></div>)}
             {personalInfo.location && (<div className="flex items-center gap-1.5 whitespace-nowrap"><MapPin className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.location}</span></div>)}
             {personalInfo.linkedin && (<div className="flex items-center gap-1.5 whitespace-nowrap"><LinkedinIcon className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.linkedin}</span></div>)}
-            {(personalInfo as any).github && (<div className="flex items-center gap-1.5 whitespace-nowrap"><GithubIcon className="w-3 h-3 flex-shrink-0" /><span>{(personalInfo as any).github}</span></div>)}
+            {personalInfo.github && (<div className="flex items-center gap-1.5 whitespace-nowrap"><GithubIcon className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.github}</span></div>)}
             {personalInfo.website && (<div className="flex items-center gap-1.5 whitespace-nowrap"><Globe className="w-3 h-3 flex-shrink-0" /><span>{personalInfo.website}</span></div>)}
           </div>
         </header>
@@ -146,7 +146,7 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
         {education.length > 0 && (
           <section className="mb-2.5 print:pt-[10mm]">
             <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Education</h2>
-            {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-1 print:break-inside-avoid"><div><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[9.5pt] leading-[1.4] text-zinc-600">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> &mdash; GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> &ndash; </span>}{edu.endDate}</div></div>))}
+            {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-1 print:break-inside-avoid"><div><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[9.5pt] leading-[1.4] text-zinc-600">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> - GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> - </span>}{edu.endDate}</div></div>))}
           </section>
         )}
         {skills.length > 0 && (

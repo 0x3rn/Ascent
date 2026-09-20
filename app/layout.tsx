@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Lora } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TurnstileProvider } from "@/components/turnstile-provider";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -32,8 +31,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://useascent.xyz"),
   title: "Ascent | AI-Powered Career Toolkit",
   description:
-    "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides. Powered by DeepSeek.",
-  keywords: ["AI Resume Builder", "ATS Friendly Resume", "Cover Letter Generator", "Interview Prep", "Career Toolkit", "DeepSeek", "Resume Optimization"],
+    "Build ATS-friendly, professional resumes with AI-powered enhancement, grammar fixing, and job tailoring. Get AI-generated cover letters and interview prep guides.",
+  keywords: ["AI Resume Builder", "ATS Friendly Resume", "Cover Letter Generator", "Interview Prep", "Career Toolkit", "Gemini", "Resume Optimization"],
   authors: [{ name: "Ascent" }],
   openGraph: {
     title: "Ascent | AI-Powered Career Toolkit",
@@ -70,17 +69,16 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TurnstileProvider>
-            {children}
-            <Toaster />
-          </TurnstileProvider>
-        </ThemeProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.documentElement.classList.toggle('dark',window.matchMedia('(prefers-color-scheme: dark)').matches)",
+          }}
+        />
+        <TurnstileProvider>
+          {children}
+          <Toaster />
+        </TurnstileProvider>
         <GoogleAnalytics gaId="G-B4D6X36XLN" />
       </body>
     </html>

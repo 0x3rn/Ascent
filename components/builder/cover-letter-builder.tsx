@@ -88,7 +88,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
       const body = await generateCoverLetter(userName, targetRole, companyName, skills, bg, turnstileToken || undefined);
       onGenerate(body, targetRole, companyName, userName, skills, useResumeData, "standard");
       setSessionVerified();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Cover letter generation failed:", err);
       handleUnauthorized(err);
     } finally {
@@ -116,7 +116,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
         gigTitle, jd: jobDescription, approach: proposedApproach, similarProject, portfolio: portfolioLink, turnaround: turnaroundTime
       });
       setSessionVerified();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Freelance proposal generation failed:", err);
       handleUnauthorized(err);
     } finally {
@@ -194,7 +194,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
               <Input value={gigTitle} onChange={(e) => setGigTitle(e.target.value)} placeholder="e.g., Full Stack Next.js Developer Needed" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-500">Client's Job Description <span className="text-red-400">*</span></label>
+              <label className="text-xs font-medium text-zinc-500">Client&apos;s Job Description <span className="text-red-400">*</span></label>
               <Textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} placeholder="Paste the exact gig description here..." className="min-h-[100px] text-xs" />
             </div>
             <div className="space-y-1.5">

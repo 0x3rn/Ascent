@@ -2,9 +2,10 @@
 
 import React from "react";
 import { TrendingUp, CheckCircle2, AlertTriangle, XCircle, Star, ArrowRightLeft, GraduationCap, Briefcase, LineChart, CheckSquare, Wrench, Sparkles, Map, Rocket } from "lucide-react";
+import type { ATSResult } from "@/lib/ats";
 
 interface AtsPreviewProps {
-  atsResult: any;
+  atsResult: ATSResult | null;
   atsRole: string;
   atsCompany: string;
   themeFont: string;
@@ -168,7 +169,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                           <div>
                             <h3 className="font-bold text-red-800 mb-2 text-[10pt] uppercase tracking-wide">Critical Gaps</h3>
                             <div className="space-y-3">
-                              {atsResult.missingSkillsImpact.criticalGaps.map((gap: any, i: number) => (
+                              {atsResult.missingSkillsImpact.criticalGaps.map((gap, i) => (
                                 <div key={i} className="bg-white p-2.5 rounded border border-red-100">
                                   <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
                                     <span className="text-[10pt] font-bold text-red-900 flex items-center gap-1.5"><span className="text-red-500">•</span> {gap.skill}</span>
@@ -193,7 +194,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                           <div>
                             <h3 className="font-bold text-amber-700 mb-2 text-[10pt] uppercase tracking-wide">Moderate Gaps</h3>
                             <div className="space-y-3">
-                              {atsResult.missingSkillsImpact.moderateGaps.map((gap: any, i: number) => (
+                              {atsResult.missingSkillsImpact.moderateGaps.map((gap, i) => (
                                 <div key={i} className="bg-white p-2.5 rounded border border-amber-100">
                                   <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
                                     <span className="text-[10pt] font-bold text-amber-900 flex items-center gap-1.5"><span className="text-amber-500">•</span> {gap.skill}</span>
@@ -227,7 +228,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                         <Star className="h-5 w-5 text-purple-600" /> Highest ROI Improvements
                       </h2>
                       <div className="grid grid-cols-2 gap-4">
-                        {atsResult.highestRoiImprovements.map((improvement: any, i: number) => (
+                        {atsResult.highestRoiImprovements.map((improvement, i) => (
                           <div key={i} className="bg-purple-50 border border-purple-100 p-4 rounded-xl flex flex-col">
                             <div className="flex justify-between items-start mb-2">
                               <span className="font-bold text-[11pt] text-purple-900">{improvement.skill}</span>
@@ -331,7 +332,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                             <Briefcase className="h-5 w-5 text-sky-600" /> Better Matched Roles
                           </h2>
                           <div className="space-y-2 text-[10pt] text-zinc-800">
-                            {atsResult.similarRoles.map((role: any, i: number) => (
+                            {atsResult.similarRoles.map((role, i) => (
                               <div key={i} className="flex justify-between border-b border-sky-100 pb-1.5 last:border-0 last:pb-0">
                                 <span className="font-medium">{role.role}</span>
                                 <span className="font-bold text-sky-700">{role.matchPercentage}%</span>
@@ -394,7 +395,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                         <CheckSquare className="h-5 w-5 text-sky-600" /> Strength vs Job Requirements
                       </h2>
                       <div className="divide-y divide-zinc-200">
-                        {atsResult.requirementsComparison.map((req: any, i: number) => (
+                        {atsResult.requirementsComparison.map((req, i) => (
                           <div key={i} className="flex justify-between items-center p-3 text-[10pt]">
                             <span className="font-medium text-zinc-700">{req.requirement}</span>
                             {req.status === "Strong" ? (
@@ -415,7 +416,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                         <Wrench className="h-5 w-5 text-blue-600" /> Concept-Based Analysis
                       </h2>
                       <div className="grid grid-cols-2 gap-4">
-                        {atsResult.skillConcepts.map((concept: any, i: number) => (
+                        {atsResult.skillConcepts.map((concept, i) => (
                           <div key={i} className="bg-zinc-50 border border-zinc-200 p-3 rounded-lg">
                             <div className="flex justify-between items-center mb-2 border-b border-zinc-200 pb-2">
                               <span className="font-bold text-[11pt] text-zinc-800">{concept.category}</span>
@@ -455,7 +456,7 @@ export function AtsPreview({ atsResult, atsRole, atsCompany, themeFont, themeAcc
                         <Sparkles className="h-5 w-5 text-amber-500" /> Bullet Point Upgrades
                       </h2>
                       <div className="space-y-4">
-                        {atsResult.actionableRewrites.map((rewrite: any, i: number) => (
+                        {atsResult.actionableRewrites.map((rewrite, i) => (
                           <div key={i} className="bg-white border border-zinc-200 rounded-lg p-4 shadow-sm">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
