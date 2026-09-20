@@ -36,6 +36,13 @@ import type {
 import { isAtsResult, type ATSResult } from "@/lib/ats";
 import { mergeImportedResume } from "@/lib/resume-import";
 import {
+  DEFAULT_RESUME_TEMPLATE,
+  isResumeTemplateId,
+  RESUME_TEMPLATE_STORAGE_KEY,
+  RESUME_TEMPLATES,
+  type ResumeTemplateId,
+} from "@/lib/resume-templates";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -52,7 +59,7 @@ import {
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
   Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload,
   Send, History, Play, StopCircle, ArrowRight, TrendingUp, Star, CircleDollarSign,
-  Map, Rocket, CheckSquare
+  Map, Rocket, CheckSquare, LayoutTemplate
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -99,6 +106,7 @@ function ResumeBuilderInner() {
 
   const [themeFont, setThemeFont] = useState("inter");
   const [themeAccent, setThemeAccent] = useState("slate");
+  const [resumeTemplate, setResumeTemplate] = useState<ResumeTemplateId>(DEFAULT_RESUME_TEMPLATE);
   const [builderMode, setBuilderMode] = useState<BuilderMode>("resume");
   const [activeTab, setActiveTab] = useState<TabId>("personal");
   const [coverView, setCoverView] = useState<CoverView>("edit");
@@ -193,6 +201,11 @@ function ResumeBuilderInner() {
 
         const storedAtsJD = localStorage.getItem("ascent_ats_jd");
         if (storedAtsJD) setAtsJD(storedAtsJD);
+
+        const storedTemplate = localStorage.getItem(RESUME_TEMPLATE_STORAGE_KEY);
+        if (storedTemplate && isResumeTemplateId(storedTemplate)) {
+          setResumeTemplate(storedTemplate);
+        }
       } catch {
         // Ignore malformed local-only history and start with a clean view.
       }
@@ -203,6 +216,11 @@ function ResumeBuilderInner() {
       window.removeEventListener("resize", check);
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasMounted) return;
+    localStorage.setItem(RESUME_TEMPLATE_STORAGE_KEY, resumeTemplate);
+  }, [hasMounted, resumeTemplate]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -221,7 +239,31 @@ function ResumeBuilderInner() {
   }, [pdfTitle]);
 
   const renderThemeSelector = () => (
-    <div className="flex items-center gap-3 self-start print:hidden rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800 mb-4 w-full md:w-auto md:mb-0 justify-between md:justify-start">
+    <div className="self-stretch print:hidden mb-4 w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+      {isRes && <div className="mb-3 flex items-center gap-2"><LayoutTemplate className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /><span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">Resume design</span><span className="text-[10px] text-zinc-400">{RESUME_TEMPLATES.find((template) => template.id === resumeTemplate)?.name}</span></div>}
+      {isRes && <div className="mb-3 flex max-w-full gap-2 overflow-x-auto px-0.5 py-1 no-scrollbar">
+        {RESUME_TEMPLATES.map((template) => (
+          <button
+            key={template.id}
+            type="button"
+            aria-pressed={resumeTemplate === template.id}
+            title={`${template.name}: ${template.description}`}
+            onClick={() => setResumeTemplate(template.id)}
+            className={`group flex w-[84px] shrink-0 flex-col gap-1.5 rounded-lg border p-1.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${resumeTemplate === template.id ? "border-blue-500 bg-blue-50 shadow-sm dark:border-blue-400 dark:bg-blue-950/40" : "border-transparent hover:border-zinc-200 hover:bg-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-700/70"}`}
+          >
+            <span className={`relative block h-[58px] overflow-hidden rounded-md border bg-white shadow-sm ${resumeTemplate === template.id ? "border-blue-300" : "border-zinc-200"}`}>
+              {template.id === "classic" && <span className="absolute inset-x-2 top-2 h-1.5 rounded bg-zinc-800" />}
+              {template.id === "modern" && <><span className="absolute inset-x-0 top-0 h-5 bg-blue-600" /><span className="absolute inset-x-2 top-8 h-1 rounded bg-zinc-300" /></>}
+              {template.id === "minimal" && <><span className="absolute bottom-0 left-0 top-0 w-1 bg-zinc-800" /><span className="absolute left-3 right-2 top-3 h-1 rounded bg-zinc-800" /></>}
+              {template.id === "editorial" && <><span className="absolute bottom-0 left-0 top-0 w-5 bg-zinc-900" /><span className="absolute left-8 right-2 top-3 h-1 rounded bg-zinc-800" /><span className="absolute left-8 right-5 top-7 h-0.5 rounded bg-zinc-300" /></>}
+              {template.id === "statement" && <><span className="absolute inset-x-0 top-0 h-6 bg-zinc-900" /><span className="absolute right-2 top-2 h-3 w-3 rounded-full bg-blue-600" /><span className="absolute left-2 right-5 top-10 h-1 rounded bg-zinc-800" /></>}
+              <span className="absolute inset-x-2 top-6 space-y-1"><span className="block h-0.5 rounded bg-zinc-300" /><span className="block h-0.5 w-4/5 rounded bg-zinc-200" /><span className="block h-0.5 rounded bg-zinc-200" /><span className="block h-0.5 w-3/5 rounded bg-zinc-200" /></span>
+            </span>
+            <span className={`px-0.5 text-[10px] font-semibold ${resumeTemplate === template.id ? "text-blue-700 dark:text-blue-300" : "text-zinc-600 dark:text-zinc-300"}`}>{template.name}</span>
+          </button>
+        ))}
+      </div>}
+      <div className="flex items-center gap-3 justify-between md:justify-start">
       <div className="flex items-center gap-2 flex-1 md:flex-none">
         <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Font</span>
         <select value={themeFont} onChange={e => setThemeFont(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{FONTS.map(f => <option key={f.value} value={f.value} style={{ color: "#000", backgroundColor: "#fff" }}>{f.label}</option>)}</select>
@@ -230,6 +272,7 @@ function ResumeBuilderInner() {
       <div className="flex items-center gap-2 flex-1 md:flex-none">
         <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">Color</span>
         <select value={themeAccent} onChange={e => setThemeAccent(e.target.value)} className="w-full md:w-auto text-[11px] font-medium border-0 bg-zinc-100 dark:bg-zinc-700/50 rounded-md py-1 px-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer outline-none transition-shadow" style={{ colorScheme: "light" }}>{COLORS.map(c => <option key={c.value} value={c.value} style={{ color: "#000", backgroundColor: "#fff" }}>{c.label}</option>)}</select>
+      </div>
       </div>
     </div>
   );
@@ -728,7 +771,7 @@ function ResumeBuilderInner() {
 
   if (!hasMounted) return null;
 
-  const resumeEl = <ResumePreview themeFont={themeFont} themeAccent={themeAccent} />;
+  const resumeEl = <ResumePreview template={resumeTemplate} themeFont={themeFont} themeAccent={themeAccent} />;
   const atsEl = <AtsPreview atsResult={atsResult} atsRole={atsRole} atsCompany={atsCompany} themeFont={themeFont} themeAccent={themeAccent} />;
   const coverEl = <CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} />;
   const intEl = <InterviewPreview content={intContent} mockReport={intMode === "mock" && mockStatus === "completed" ? mockReport ?? undefined : undefined} mockMessages={intMode === "mock" && mockStatus === "completed" ? mockMessages : undefined} targetRole={intRole} companyName={intCompany} themeFont={themeFont} themeAccent={themeAccent} />;
@@ -1518,7 +1561,7 @@ function ResumeBuilderInner() {
           )}
           <div className="flex-1 overflow-y-auto p-3 md:p-5">{renderLeftPane()}</div>
         </aside>
-        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]"><CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} /></div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
+        <main className="hidden md:flex flex-1 shrink-0 items-stretch justify-center overflow-auto bg-zinc-50 p-3 dark:bg-zinc-900/50 lg:p-6 print:flex print:h-auto print:w-full print:items-start print:justify-start print:overflow-visible print:bg-white print:p-0"><div className="flex w-full flex-col items-stretch gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="w-full origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)] print:w-full print:shadow-none print:ring-0">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]"><CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} /></div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
       </div>
     </>
   );

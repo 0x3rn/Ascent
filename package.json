@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:auth": "node --test tests/google-service-account.test.ts",
+    "test:templates": "node --test tests/resume-templates.test.ts",
     "test:auth:live": "node scripts/verify-google-auth.ts",
     "build:cloudflare": "opennextjs-cloudflare build",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
