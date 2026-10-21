@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { AiMagicButton } from "@/components/builder/ai-magic-button";
 import { enhanceBulletPoint, fixGrammar, tailorToJob } from "@/app/actions/resume-ai";
-import { Plus, Trash2, Wand2, GripVertical } from "lucide-react";
+import { Plus, Trash2, Target, GripVertical, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useTurnstile } from "@/components/turnstile-provider";
@@ -51,7 +51,7 @@ function TailorDialog({
       <Textarea value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} placeholder="Paste the target job description here..." className="min-h-[80px] text-xs" />
       <div className="flex gap-2 justify-end">
         <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-        <Button variant="magic" size="sm" onClick={handleTailor} disabled={loading || !jobDesc.trim()}>{loading ? "Tailoring..." : "Tailor Bullets"}</Button>
+        <Button variant="magic" size="sm" onClick={handleTailor} disabled={loading || !jobDesc.trim()} className="gap-1.5">{loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}{loading ? "Tailoring..." : "Tailor Bullets"}</Button>
       </div>
     </div>
   );
@@ -110,7 +110,7 @@ export function ExperienceSection() {
                         <div className="flex items-center gap-1 flex-nowrap">
                           <AiMagicButton onClick={() => fixGrammar(exp.bullets, turnstileToken || undefined)} onResult={(text) => updateExperience(exp.id, { bullets: text })} label="Fix Grammar" className="text-[10px] px-1.5 h-7" />
                           <AiMagicButton onClick={() => enhanceBulletPoint(exp.bullets, turnstileToken || undefined)} onResult={(text) => updateExperience(exp.id, { bullets: text })} label="Enhance" className="text-[10px] px-1.5 h-7" />
-                          <Button variant="magic" size="sm" onClick={() => setTailorOpenId(tailorOpenId === exp.id ? null : exp.id)} className="gap-1 shrink-0 text-[10px] px-1.5 h-7"><Wand2 className="h-3 w-3" /><span className="hidden xs:inline">Tailor to Job</span><span className="xs:hidden">Tailor</span></Button>
+                          <Button variant="magic" size="sm" onClick={() => setTailorOpenId(tailorOpenId === exp.id ? null : exp.id)} className="gap-1 shrink-0 text-[10px] px-1.5 h-7"><Target className="h-3 w-3" /><span className="hidden xs:inline">Tailor to Job</span><span className="xs:hidden">Tailor</span></Button>
                         </div>
                         <Textarea value={exp.bullets} onChange={(e) => updateExperience(exp.id, { bullets: e.target.value })} placeholder="- Led redesign of core product...&#10;- Grew revenue by X%..." className="min-h-[100px] text-sm leading-relaxed font-mono" />
                         {tailorOpenId === exp.id && <TailorDialog expId={exp.id} bullets={exp.bullets} onClose={() => setTailorOpenId(null)} />}

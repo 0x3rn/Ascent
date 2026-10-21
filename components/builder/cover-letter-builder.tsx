@@ -5,7 +5,7 @@ import { useResume } from "@/lib/resume-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, X, Plus } from "lucide-react";
+import { MailPlus, Handshake, Loader2, X, Plus } from "lucide-react";
 import { generateCoverLetter, generateFreelanceProposal } from "@/app/actions/resume-ai";
 import { useTurnstile } from "@/components/turnstile-provider";
 
@@ -177,7 +177,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
             </label>
 
             <Button onClick={handleGenerateStandard} disabled={loading || !canGenerateStandard} className="w-full gap-1.5 mt-2" variant="magic" size="sm">
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MailPlus className="h-3.5 w-3.5" />}
               {loading ? "Generating..." : "Generate Cover Letter"}
             </Button>
           </div>
@@ -223,7 +223,7 @@ export function CoverLetterBuilder({ onGenerate }: CoverLetterBuilderProps) {
             </label>
 
             <Button onClick={handleGenerateFreelance} disabled={loading || !canGenerateFreelance} className="w-full gap-1.5 mt-2" variant="magic" size="sm">
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Handshake className="h-3.5 w-3.5" />}
               {loading ? "Generating..." : "Generate Proposal"}
             </Button>
           </div>

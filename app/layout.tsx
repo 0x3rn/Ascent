@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter, Lora } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TurnstileProvider } from "@/components/turnstile-provider";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { AutoHideScrollbar } from "@/components/auto-hide-scrollbar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -76,6 +77,7 @@ export default function RootLayout({
           }}
         />
         <TurnstileProvider>
+          <AutoHideScrollbar />
           {children}
           <Toaster />
         </TurnstileProvider>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Wand2, Loader2 } from "lucide-react";
+import { Gem, SpellCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTurnstile } from "@/components/turnstile-provider";
 
@@ -11,6 +11,7 @@ interface AiMagicButtonProps {
   onResult: (text: string) => void;
   label?: string;
   className?: string;
+  icon?: React.ReactNode;
 }
 
 export function AiMagicButton({
@@ -18,6 +19,7 @@ export function AiMagicButton({
   onResult,
   label = "Enhance with AI",
   className,
+  icon,
 }: AiMagicButtonProps) {
   const [loading, setLoading] = useState(false);
   const { handleUnauthorized, setSessionVerified } = useTurnstile();
@@ -38,6 +40,12 @@ export function AiMagicButton({
     }
   };
 
+  const defaultIcon = label.toLowerCase().includes("grammar") ? (
+    <SpellCheck className="h-3 w-3" />
+  ) : (
+    <Gem className="h-3 w-3" />
+  );
+
   return (
     <Button
       variant="magic"
@@ -49,7 +57,7 @@ export function AiMagicButton({
       {loading ? (
         <Loader2 className="h-3 w-3 animate-spin" />
       ) : (
-        <Wand2 className="h-3 w-3" />
+        icon ?? defaultIcon
       )}
       {loading ? "Working..." : label}
     </Button>

@@ -52,7 +52,7 @@ import {
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
   Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload,
   Send, History, Play, StopCircle, ArrowRight, TrendingUp, Star, CircleDollarSign,
-  Map, Rocket, CheckSquare
+  Map, Rocket, CheckSquare, ScanText, BookOpenCheck
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -1291,7 +1291,7 @@ function ResumeBuilderInner() {
         <>
           {(!isPrev || !isMobile) && (
             <div className="mb-3 flex gap-2">
-              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 active:scale-90"><Sparkles className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
+              <Button onClick={() => setPasteOpen(true)} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 active:scale-90"><ScanText className="h-3.5 w-3.5 text-primary" /><span className="text-primary font-semibold">Magic Import</span></Button>
               <AlertDialog>
                 <AlertDialogTrigger render={
                   <Button variant="destructive" size="sm" className="flex-1 gap-1.5 text-xs h-8 active:scale-90 transition-all duration-200">
@@ -1352,7 +1352,7 @@ function ResumeBuilderInner() {
         <div className="flex flex-col h-full">
           {/* Sub Navigation */}
           <div className="shrink-0 mb-4 bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl flex">
-            <button onClick={() => setIntMode("prep")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "prep" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-3.5 w-3.5" />Prep Guide</button>
+            <button onClick={() => setIntMode("prep")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "prep" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><BookOpenCheck className="h-3.5 w-3.5" />Prep Guide</button>
             <button onClick={() => setIntMode("mock")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "mock" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><MessageSquare className="h-3.5 w-3.5" />Live Mock</button>
             <button onClick={() => setIntMode("dashboard")} className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all ${intMode === "dashboard" ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><History className="h-3.5 w-3.5" />Dashboard</button>
           </div>
@@ -1364,7 +1364,7 @@ function ResumeBuilderInner() {
                 <div className="p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800/50 space-y-3">
                   <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Target Role <span className="text-red-400">*</span></label><Input value={intRole} onChange={e => setIntRole(e.target.value)} placeholder="Senior Product Manager" /></div>
                   <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company <span className="text-red-400">*</span></label><Input value={intCompany} onChange={e => setIntCompany(e.target.value)} placeholder="Stripe" /></div>
-                  <Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button>
+                  <Button onClick={handleIntGenerate} disabled={intGenerating || !intRole.trim() || !intCompany.trim()} className="w-full gap-1.5" variant="magic" size="sm">{intGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookOpenCheck className="h-3.5 w-3.5" />}{intGenerating ? "Generating..." : "Generate Prep Guide"}</Button>
                 </div>
               </div>
             )}
@@ -1401,7 +1401,7 @@ function ResumeBuilderInner() {
             <div className="flex items-center justify-between mb-3 shrink-0">
               <div>
                 <h2 className="text-sm font-semibold flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
+                  <ScanText className="h-4 w-4 text-primary" />
                   <span className="text-primary">Magic Import</span>
                 </h2>
                 <p className="mt-1 text-xs text-zinc-500">
@@ -1480,7 +1480,7 @@ function ResumeBuilderInner() {
               {pasteLoading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="h-3.5 w-3.5" />
+                <ScanText className="h-3.5 w-3.5" />
               )}
               {pasteLoading ? "Structuring Resume..." : "Populate Resume"}
             </Button>
