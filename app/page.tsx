@@ -52,7 +52,7 @@ import {
   GraduationCap, Wrench, Eye, Mail, Copy, Check, Trash2, Scissors,
   Loader2, RotateCw, Sparkles, MessageSquare, Wand2, Target, X, CheckCircle, XCircle, Upload,
   Send, History, Play, StopCircle, ArrowRight, TrendingUp, Star, CircleDollarSign,
-  Map, Rocket, CheckSquare, ScanText, BookOpenCheck
+  Map, Rocket, CheckSquare, ScanText, BookOpenCheck, Gauge
 } from "lucide-react";
 
 type BuilderMode = "resume" | "cover-letter" | "interview";
@@ -164,7 +164,7 @@ function ResumeBuilderInner() {
   const { turnstileToken, handleUnauthorized, setSessionVerified } = useTurnstile();
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768); 
+    const check = () => setIsMobile(window.innerWidth < 1280); 
     window.addEventListener("resize", check); 
 
     const initializationTimer = window.setTimeout(() => {
@@ -203,6 +203,12 @@ function ResumeBuilderInner() {
       window.removeEventListener("resize", check);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isMobile && activeTab === "preview") {
+      setActiveTab("personal");
+    }
+  }, [isMobile, activeTab]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -768,7 +774,7 @@ function ResumeBuilderInner() {
             <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Company (Optional)</label><Input value={atsCompany} onChange={e => setAtsCompany(e.target.value)} placeholder="e.g. Acme Corp" className="h-9 text-sm" /></div>
             <div className="space-y-1.5"><label className="text-xs font-medium text-zinc-500">Job Description <span className="text-red-400">*</span></label><Textarea value={atsJD} onChange={e => setAtsJD(e.target.value)} placeholder="Paste a target job description..." className="min-h-[100px] text-sm" /></div>
             <Button onClick={handleATSScan} disabled={atsLoading || !atsJD.trim()} variant="magic" className="w-full gap-2 shadow-sm font-semibold h-9">
-              {atsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {atsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gauge className="h-4 w-4" />}
               {atsLoading ? "Running Semantic Evaluation..." : "Generate CareerFit Report"}
             </Button>
           </div>
@@ -1321,7 +1327,7 @@ function ResumeBuilderInner() {
           {isPrev && isMobile && (
               <div className="flex flex-col pt-2">
                 {renderThemeSelector()}
-                <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
+                <div className="flex justify-center w-full"><div className="w-full max-w-[794px] shadow-lg bg-white"><div ref={previewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * previewScale) }}><div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{resumeEl}</div></div></div></div>
               </div>
           )}
         </>
@@ -1342,7 +1348,7 @@ function ResumeBuilderInner() {
             <Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Delete</Button>
           </div>
           {renderThemeSelector()}
-          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
+          <div className="flex justify-center w-full"><div className="w-full max-w-[794px] shadow-lg bg-white"><div ref={coverPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * coverPreviewScale) }}><div style={{ transform: `scale(${coverPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{coverEl}</div></div></div></div>
         </div>
       );
     }
@@ -1385,7 +1391,7 @@ function ResumeBuilderInner() {
             <Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-[10px] h-7 text-red-600"><Trash2 className="h-3 w-3" />Clear</Button>
           </div>
           {renderThemeSelector()}
-          <div className="flex justify-center"><div className="w-full shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
+          <div className="flex justify-center w-full"><div className="w-full max-w-[794px] shadow-lg bg-white"><div ref={intPreviewWrapperRef} className="overflow-y-auto overflow-x-hidden no-scrollbar w-full" style={{ height: Math.ceil(A4_HEIGHT_PX * intPreviewScale) }}><div style={{ transform: `scale(${intPreviewScale})`, transformOrigin: "top left", width: A4_WIDTH_PX }}>{intEl}</div></div></div></div>
         </div>
       );
     }
@@ -1487,8 +1493,8 @@ function ResumeBuilderInner() {
           </div>
         </div>
       )}
-      <div className="flex flex-col md:flex-row h-dvh md:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
-        <aside className="print:hidden w-full md:w-[440px] md:min-w-[440px] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
+      <div className="flex flex-col xl:flex-row h-dvh xl:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
+        <aside className="print:hidden w-full xl:w-[440px] xl:min-w-[440px] border-b xl:border-b-0 xl:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
           <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>
           <div className="shrink-0 px-4 md:px-5 py-3 border-b border-zinc-100 dark:border-zinc-800/50">
             <nav className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
@@ -1518,7 +1524,7 @@ function ResumeBuilderInner() {
           )}
           <div className="flex-1 overflow-y-auto p-3 md:p-5">{renderLeftPane()}</div>
         </aside>
-        <main className="hidden md:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]"><CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} /></div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
+        <main className="hidden xl:flex flex-1 bg-zinc-50 dark:bg-zinc-900/50 overflow-auto items-start justify-center p-6 shrink-0 print:flex print:bg-white print:p-0 print:overflow-visible print:h-auto print:w-full print:items-start print:justify-start"><div className="flex flex-col items-center gap-4 print:w-full print:gap-0">{renderThemeSelector()}{isRes ? <div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{isAts ? atsEl : resumeEl}</div> : isCov ? (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleCopy} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied!" : "Copy Text"}</Button><Button onClick={handleShorten} disabled={!coverBody || shortening} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{shortening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scissors className="h-3.5 w-3.5" />}{shortening ? "Shortening..." : "Shorten"}</Button><Button onClick={handleRegenerate} disabled={!coverBody || regenerating} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}{regenerating ? "Regenerating..." : "Regenerate"}</Button><Button onClick={handleDelete} disabled={!coverBody} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Delete</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]"><CoverLetterPreview body={coverBody} targetRole={coverTargetRole} companyName={coverCompanyName} userName={coverUserName} themeFont={themeFont} themeAccent={themeAccent} type={coverType} /></div></>) : (<><div className="flex items-center gap-2 self-start print:hidden flex-wrap"><Button onClick={handleIntCopy} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-white dark:bg-zinc-800 shadow-sm transition-all">{intCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}{intCopied ? "Copied!" : "Copy"}</Button><Button onClick={handleIntClear} disabled={!intContent} size="sm" variant="outline" className="gap-1.5 text-xs h-8 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-all"><Trash2 className="h-3.5 w-3.5" />Clear</Button></div><div className="origin-top shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5 print:ring-0 print:shadow-none print:w-full transition-shadow hover:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.2)]">{intEl}</div></>)}</div></main>
       </div>
     </>
   );
