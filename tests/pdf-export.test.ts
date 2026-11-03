@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildNativePdfBytes,
   escapePdfLiteralString,
+  uint8ArrayToBase64,
   type RenderedPageData,
 } from "../lib/pdf-export.ts";
 
@@ -68,4 +69,9 @@ test("builds a valid multi-page %PDF-1.4 document with DCTDecode images and sear
       `Object ${objId} offset ${offset} should point to "${objId} 0 obj", got "${sliceAtOffset}"`
     );
   });
+
+  // Base64 round-trip for Safari form attachment POST
+  const base64 = uint8ArrayToBase64(pdfBytes);
+  const decoded = new Uint8Array(Buffer.from(base64, "base64"));
+  assert.deepEqual(decoded, pdfBytes);
 });

@@ -13,9 +13,9 @@ interface CoverLetterPreviewProps {
 }
 
 const FONT_MAP: Record<string, string> = {
-  inter: "Inter, sans-serif",
-  lora: "Lora, Georgia, serif",
-  geist: "Geist Mono, monospace",
+  inter: "var(--font-inter), Inter, sans-serif",
+  lora: "var(--font-lora), Lora, Georgia, serif",
+  geist: "var(--font-geist-mono), 'Geist Mono', monospace",
 };
 
 const COLOR_MAP: Record<string, string> = {

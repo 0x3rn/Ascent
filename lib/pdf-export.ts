@@ -42,6 +42,8 @@ interface TextDrawItem {
   lineThrough: boolean;
   underline: boolean;
   decorationColor: string;
+  hasLeadingSpace?: boolean;
+  hasTrailingSpace?: boolean;
 }
 
 interface SvgDrawItem {
@@ -266,7 +268,17 @@ function collectTextDrawItems(
       continue;
     }
 
-    range.selectNodeContents(textNode);
+    const firstNonSpace = raw.search(/\S/);
+    if (firstNonSpace === -1) continue;
+    const trailingWsMatch = raw.match(/\s+$/);
+    const lastNonSpaceEnd = trailingWsMatch
+      ? raw.length - trailingWsMatch[0].length
+      : raw.length;
+    const hasLeadingSpace = firstNonSpace > 0;
+    const hasTrailingSpace = lastNonSpaceEnd < raw.length;
+
+    range.setStart(textNode, firstNonSpace);
+    range.setEnd(textNode, lastNonSpaceEnd);
     const fullRects = range.getClientRects();
     if (fullRects.length === 0) continue;
 
@@ -283,7 +295,7 @@ function collectTextDrawItems(
       const r = fullRects[0];
       if (r.width > 0 && r.height > 0) {
         const normalized = applyTextTransform(
-          raw.replace(/\s+/g, " ").trim(),
+          raw.slice(firstNonSpace, lastNonSpaceEnd).replace(/\s+/g, " "),
           textTransform
         );
         if (normalized) {
@@ -301,6 +313,8 @@ function collectTextDrawItems(
             lineThrough,
             underline,
             decorationColor,
+            hasLeadingSpace,
+            hasTrailingSpace,
           });
         }
       }
@@ -725,6 +739,11 @@ function renderPageCanvas(
   const pageTextItems: PdfPageTextItem[] = [];
   ctx.textBaseline = "alphabetic";
 
+  let prevLineY = -9999;
+  let prevDomRight = -9999;
+  let prevCanvasRight = -9999;
+  let prevHadTrailingSpace = false;
+
   for (const t of texts) {
     const { x, y, width, height } = t.rect;
     if (y + height < slice.startY || y > slice.endY) continue;
@@ -732,14 +751,31 @@ function renderPageCanvas(
     ctx.font = t.font;
     ctx.fillStyle = t.color;
 
+    let drawX = x;
+    const sameLine = Math.abs(y - prevLineY) < 4;
+    const domGap = x - prevDomRight;
+    if (sameLine && domGap >= -4 && domGap < 28) {
+      const needsSpace = Boolean(prevHadTrailingSpace || t.hasLeadingSpace);
+      const minGap = needsSpace
+        ? Math.max(domGap, t.fontSizePx * 0.26)
+        : Math.max(0, domGap);
+      drawX = Math.max(x, prevCanvasRight + minGap);
+    }
+
     const baselineY = y + height * 0.78;
-    ctx.fillText(t.text, x, baselineY);
+    ctx.fillText(t.text, drawX, baselineY);
+    const measuredWidth = ctx.measureText(t.text).width;
+
+    prevLineY = y;
+    prevDomRight = x + width;
+    prevCanvasRight = drawX + measuredWidth;
+    prevHadTrailingSpace = Boolean(t.hasTrailingSpace);
 
     if (t.lineThrough) {
       const strikeY = y + height * 0.52;
       ctx.beginPath();
-      ctx.moveTo(x, strikeY);
-      ctx.lineTo(x + width, strikeY);
+      ctx.moveTo(drawX, strikeY);
+      ctx.lineTo(drawX + Math.max(width, measuredWidth), strikeY);
       ctx.strokeStyle = t.decorationColor;
       ctx.lineWidth = Math.max(1, t.fontSizePx * 0.07);
       ctx.stroke();
@@ -748,15 +784,15 @@ function renderPageCanvas(
     if (t.underline) {
       const underY = baselineY + 2;
       ctx.beginPath();
-      ctx.moveTo(x, underY);
-      ctx.lineTo(x + width, underY);
+      ctx.moveTo(drawX, underY);
+      ctx.lineTo(drawX + Math.max(width, measuredWidth), underY);
       ctx.strokeStyle = t.decorationColor;
       ctx.lineWidth = Math.max(1, t.fontSizePx * 0.07);
       ctx.stroke();
     }
 
     const pageY = baselineY + translateY;
-    const xPt = +(x * (A4_WIDTH_PT / A4_WIDTH_PX)).toFixed(2);
+    const xPt = +(drawX * (A4_WIDTH_PT / A4_WIDTH_PX)).toFixed(2);
     const yPt = +(A4_HEIGHT_PT - pageY * (A4_HEIGHT_PT / A4_HEIGHT_PX)).toFixed(2);
     const fontSizePt = Math.max(
       6,
@@ -773,7 +809,7 @@ function renderPageCanvas(
 
   ctx.restore();
 
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.96);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
   const binaryStr = atob(dataUrl.split(",")[1] ?? "");
   const jpegBytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i += 1) {
@@ -908,6 +944,70 @@ export function buildNativePdfBytes(pages: RenderedPageData[]): Uint8Array {
   return output;
 }
 
+export function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+function shouldUseServerAttachmentDownload(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari =
+    /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  return isIOS || isSafari || isMobile;
+}
+
+function triggerPdfDownload(pdfBytes: Uint8Array, safeFilename: string): void {
+  if (shouldUseServerAttachmentDownload()) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `/api/pdf-download/${encodeURIComponent(safeFilename)}`;
+    form.style.display = "none";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "hidden";
+    nameInput.name = "filename";
+    nameInput.value = safeFilename;
+    form.appendChild(nameInput);
+
+    const dataInput = document.createElement("input");
+    dataInput.type = "hidden";
+    dataInput.name = "pdfBase64";
+    dataInput.value = uint8ArrayToBase64(pdfBytes);
+    form.appendChild(dataInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    window.setTimeout(() => {
+      form.remove();
+    }, 5_000);
+    return;
+  }
+
+  const blob = new Blob([pdfBytes.buffer as ArrayBuffer], {
+    type: "application/octet-stream",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = safeFilename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export async function exportElementToPdf(
   element: HTMLElement,
   filename: string
@@ -947,15 +1047,5 @@ export async function exportElementToPdf(
     ? filename
     : `${filename}.pdf`;
 
-  const blob = new Blob([pdfBytes.buffer as ArrayBuffer], {
-    type: "application/pdf",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = safeFilename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 5_000);
+  triggerPdfDownload(pdfBytes, safeFilename);
 }

@@ -11,9 +11,9 @@ interface ResumePreviewProps {
 }
 
 const FONT_MAP: Record<string, string> = {
-  inter: "Inter, sans-serif",
-  lora: "Lora, Georgia, serif",
-  geist: "Geist Mono, monospace",
+  inter: "var(--font-inter), Inter, sans-serif",
+  lora: "var(--font-lora), Lora, Georgia, serif",
+  geist: "var(--font-geist-mono), 'Geist Mono', monospace",
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -70,7 +70,7 @@ function BulletList({ text }: { text: string }) {
   const html = marked.parse(text, { breaks: true }) as string;
   return (
     <div
-      className="text-[10.5pt] leading-[1.4] text-zinc-700 space-y-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-0 [&_li]:my-0 [&_p]:my-0"
+      className="text-[10.5pt] leading-[1.4] text-zinc-700 space-y-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-0 [&_li]:my-0.5 [&_p]:my-0"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -95,7 +95,7 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
           <tr>
             <td>
               <div className="px-[18mm] py-[16mm] print:px-[18mm] print:py-0">
-                <header className="text-center mb-3 print:break-after-avoid">
+                <header className="text-center mb-5 print:break-after-avoid">
           <h1 className="text-[18pt] font-bold leading-tight uppercase" style={{ color: accentColor }}>{personalInfo.fullName || "Your Name"}</h1>
           {personalInfo.title && (<p className="text-[11.5pt] text-zinc-600 mt-0.5 font-semibold leading-snug">{personalInfo.title}</p>)}
           <div className="flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-1.5 text-[9pt] text-zinc-500 print:justify-center">
@@ -108,16 +108,16 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
           </div>
         </header>
         {personalInfo.summary && (
-          <section className="mb-2.5 print:pt-[10mm]">
-            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Professional Summary</h2>
+          <section className="mb-5 last:mb-0 print:pt-[10mm]">
+            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-1 mb-2 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Professional Summary</h2>
             <MarkdownContent text={personalInfo.summary} />
           </section>
         )}
         {experience.length > 0 && (
-          <section className="mb-2.5 print:pt-[10mm]">
-            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Professional Experience</h2>
+          <section className="mb-5 last:mb-0 print:pt-[10mm]">
+            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-1 mb-2 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Professional Experience</h2>
             {experience.map((exp) => (
-              <div key={exp.id} className="mb-2 print:break-inside-avoid">
+              <div key={exp.id} className="mb-3.5 last:mb-0 print:break-inside-avoid">
                 <div className="flex justify-between items-start gap-2">
                   <div>
                     <h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{exp.role || "Role"}</h3>
@@ -138,21 +138,21 @@ export function ResumePreview({ themeFont = "inter", themeAccent = "slate" }: Re
           </section>
         )}
         {projects.length > 0 && (
-          <section className="mb-2.5 print:pt-[10mm]">
-            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Project{projects.length !== 1 ? "s" : ""}</h2>
-            {projects.map((proj) => (<div key={proj.id} className="mb-2 print:break-inside-avoid"><div className="flex justify-between items-baseline gap-2"><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{proj.name || "Project Name"}</h3>{proj.link && <span className="text-[9pt] text-zinc-500 whitespace-nowrap shrink-0">{proj.link}</span>}</div>{proj.skills && <p className="text-[9pt] italic text-zinc-600 mt-0.5">{proj.skills}</p>}{proj.bullets && (<div className="mt-0.5 ml-0"><BulletList text={proj.bullets} /></div>)}</div>))}
+          <section className="mb-5 last:mb-0 print:pt-[10mm]">
+            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-1 mb-2 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Project{projects.length !== 1 ? "s" : ""}</h2>
+            {projects.map((proj) => (<div key={proj.id} className="mb-3.5 last:mb-0 print:break-inside-avoid"><div className="flex justify-between items-baseline gap-2"><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{proj.name || "Project Name"}</h3>{proj.link && <span className="text-[9pt] text-zinc-500 whitespace-nowrap shrink-0">{proj.link}</span>}</div>{proj.skills && <p className="text-[9pt] italic text-zinc-600 mt-0.5">{proj.skills}</p>}{proj.bullets && (<div className="mt-1 ml-0"><BulletList text={proj.bullets} /></div>)}</div>))}
           </section>
         )}
         {education.length > 0 && (
-          <section className="mb-2.5 print:pt-[10mm]">
-            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Education</h2>
-            {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-1 print:break-inside-avoid"><div><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[9.5pt] leading-[1.4] text-zinc-600">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> - GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> - </span>}{edu.endDate}</div></div>))}
+          <section className="mb-5 last:mb-0 print:pt-[10mm]">
+            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-1 mb-2 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Education</h2>
+            {education.map((edu) => (<div key={edu.id} className="flex justify-between items-baseline flex-wrap gap-1 mb-2.5 last:mb-0 print:break-inside-avoid"><div><h3 className="text-[10pt] font-bold leading-snug text-zinc-900">{edu.school || "School"}</h3><p className="text-[9.5pt] leading-[1.4] text-zinc-600 mt-0.5">{edu.degree}{edu.degree && edu.field && <span> in </span>}{edu.field}{edu.gpa && <span> - GPA: {edu.gpa}</span>}</p></div><div className="text-[9pt] text-zinc-500 whitespace-nowrap">{edu.startDate}{edu.startDate && edu.endDate && <span> &ndash; </span>}{edu.endDate}</div></div>))}
           </section>
         )}
         {skills.length > 0 && (
-          <section className="print:pt-[10mm]">
-            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-0.5 mb-1 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Skills</h2>
-            {skills.map((sk) => (<div key={sk.id} className="mb-1"><p className="text-[10.5pt] leading-[1.4] text-zinc-900"><span className="font-semibold">{sk.category}: </span><span className="text-zinc-700">{sk.skills}</span></p></div>))}
+          <section className="mb-5 last:mb-0 print:pt-[10mm]">
+            <h2 className="text-[11pt] font-bold leading-snug uppercase tracking-normal pb-1 mb-2 border-b border-solid print:break-after-avoid" style={{ borderColor: accentColor, color: accentColor }}>Skills</h2>
+            {skills.map((sk) => (<div key={sk.id} className="mb-1.5 last:mb-0"><p className="text-[10.5pt] leading-[1.4] text-zinc-900"><span className="font-semibold">{sk.category}: </span><span className="text-zinc-700">{sk.skills}</span></p></div>))}
           </section>
         )}
       </div>
