@@ -34,6 +34,7 @@ import type {
   MockInterviewReport,
 } from "@/lib/mock-interview";
 import { isAtsResult, type ATSResult } from "@/lib/ats";
+import { exportElementToPdf } from "@/lib/pdf-export";
 import { mergeImportedResume } from "@/lib/resume-import";
 import {
   AlertDialog,
@@ -155,10 +156,12 @@ function ResumeBuilderInner() {
 
   const [coverPreviewScale, setCoverPreviewScale] = useState(1);
   const [intPreviewScale, setIntPreviewScale] = useState(1);
+  const [pdfExporting, setPdfExporting] = useState(false);
 
   const previewWrapperRef = useRef<HTMLDivElement>(null);
   const coverPreviewWrapperRef = useRef<HTMLDivElement>(null);
   const intPreviewWrapperRef = useRef<HTMLDivElement>(null);
+  const exportTargetRef = useRef<HTMLDivElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const { turnstileToken, handleUnauthorized, setSessionVerified } = useTurnstile();
@@ -217,14 +220,43 @@ function ResumeBuilderInner() {
   }, [mockMessages, mockLoading]);
 
   const firstName = (data.personalInfo.fullName || "My").trim().split(/\s+/)[0] || "My";
-  const pdfTitle = `${firstName} Resume`;
+  const pdfTitle =
+    builderMode === "resume"
+      ? activeTab === "ats"
+        ? `${firstName} CareerFit Report.pdf`
+        : `${firstName} Resume.pdf`
+      : builderMode === "cover-letter"
+      ? coverType === "freelance"
+        ? `${firstName} Freelance Proposal.pdf`
+        : `${firstName} Cover Letter.pdf`
+      : intMode === "mock" && mockStatus === "completed"
+      ? `${firstName} Mock Interview Report.pdf`
+      : `${firstName} Interview Prep.pdf`;
 
-  const handlePrint = useCallback(() => {
-    const originalTitle = document.title;
-    document.title = pdfTitle;
-    window.print();
-    document.title = originalTitle;
-  }, [pdfTitle]);
+  const handleDownloadPdf = useCallback(async () => {
+    if (pdfExporting || !exportTargetRef.current) return;
+    setPdfExporting(true);
+    try {
+      const targetEl =
+        (exportTargetRef.current.firstElementChild as HTMLElement | null) ??
+        exportTargetRef.current;
+      await exportElementToPdf(targetEl, pdfTitle);
+    } catch (error: unknown) {
+      toast.error("Failed to generate PDF", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setPdfExporting(false);
+    }
+  }, [pdfExporting, pdfTitle]);
+
+
+
+
+
+
+
 
   const renderThemeSelector = () => (
     <div className="flex items-center gap-3 self-start print:hidden rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-2 shadow-sm bg-white dark:bg-zinc-800 mb-4 w-full md:w-auto md:mb-0 justify-between md:justify-start">
@@ -1493,9 +1525,10 @@ function ResumeBuilderInner() {
           </div>
         </div>
       )}
+      <div aria-hidden="true" className="fixed -left-[10000px] top-0 w-[210mm] pointer-events-none select-none overflow-visible print:hidden"><div ref={exportTargetRef}>{isRes ? (isAts ? atsEl : resumeEl) : isCov ? coverEl : intEl}</div></div>
       <div className="flex flex-col xl:flex-row h-dvh xl:h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
         <aside className="print:hidden w-full xl:w-[440px] xl:min-w-[440px] border-b xl:border-b-0 xl:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
-          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={() => handlePrint()} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-500 text-white border-0"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline font-medium">Download PDF</span><span className="sm:hidden font-medium">PDF</span></Button></header>
+          <header className="shrink-0 px-4 md:px-5 py-3 md:py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between gap-3"><div className="flex items-center gap-2 md:gap-2.5"><div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"><FileText className="h-4 w-4 md:h-4 md:w-4 text-white" /></div><div><h1 className="text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 leading-tight">Ascent</h1><p className="text-[10px] md:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">AI Career Toolkit</p></div></div><Button onClick={handleDownloadPdf} disabled={pdfExporting} size="sm" className="gap-1.5 md:gap-2 shrink-0 text-xs h-8 md:h-9 px-3 md:px-4 active:scale-95 transition-all shadow-sm hover:shadow-md bg-blue-600 hover:bg-blue-500 text-white border-0">{pdfExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}<span className="hidden sm:inline font-medium">{pdfExporting ? "Building PDF..." : "Download PDF"}</span><span className="sm:hidden font-medium">{pdfExporting ? "..." : "PDF"}</span></Button></header>
           <div className="shrink-0 px-4 md:px-5 py-3 border-b border-zinc-100 dark:border-zinc-800/50">
             <nav className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl">
               <button onClick={() => { setBuilderMode("resume"); setActiveTab("personal"); }} className={`whitespace-nowrap flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${isRes ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 dark:text-zinc-400 dark:hover:text-zinc-300"}`}><FileText className="h-4 w-4" />Resume</button>
